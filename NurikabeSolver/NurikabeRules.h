@@ -22,7 +22,7 @@ namespace Nurikabe
 
 		std::vector<Point> FindOverlappingConnectingSquares(const Board& board1, const Board& board2, const Point& pt);
 
-		int FindDistance(const Board& board, const Point& start, const Point& end);
-		bool CanReach(const Board& board, const Point& start, const Point& end, int maxDistance);
+		int FindDistance(const Point& start, const Point& end);
+		bool CanReach(const Point& start, const Point& end, int maxDistance);
 	};
 }

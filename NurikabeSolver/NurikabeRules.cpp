@@ -201,14 +201,14 @@ std::vector<Point> Nurikabe::Rules::FindOverlappingConnectingSquares(const Board
 	return all;
 }
 
-int Rules::FindDistance(const Board& board, const Point& start, const Point& end)
+int Rules::FindDistance(const Point& start, const Point& end)
 {
 	int dist = (int)abs(end.x - start.x);
 	dist += (int)abs(end.y - start.y);
-	return dist + 1;
+	return dist;
 }
 
-bool Rules::CanReach(const Board& board, const Point& start, const Point& end, int maxDistance)
+bool Rules::CanReach(const Point& start, const Point& end, int maxDistance)
 {
-	return FindDistance(board, start, end) <= maxDistance;
+	return FindDistance(start, end) <= maxDistance;
 }
