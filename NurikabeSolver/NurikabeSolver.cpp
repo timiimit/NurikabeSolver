@@ -78,7 +78,12 @@ void Solver::SolvePerSquare()
 			}
 			else
 			{
+				// If there's only one way to go, then go there
+
 				Region region = Region(&board, pt)
+					.ExpandAllInline([square](const Point&, Square& squareInner) {
+						return squareInner.GetState() == square.GetState();
+					})
 					.Neighbours([](const Point&, Square& squareInner) {
 						return squareInner.GetState() == SquareState::Unknown;
 					});
