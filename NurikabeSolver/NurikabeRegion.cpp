@@ -86,7 +86,7 @@ Region Region::Intersection(const Region& a, const Region& b)
 		return Region(nullptr);
 
 	Region ret(a.board);
-	ret.squares.reserve((size_t)std::fmin(a.squares.size(), b.squares.size()));
+	ret.squares.reserve((size_t)std::min(a.squares.size(), b.squares.size()));
 	for (size_t i = 0; i < a.squares.size(); i++)
 	{
 		if (std::find(b.squares.begin(), b.squares.end(), a.squares[i]) != b.squares.end())
