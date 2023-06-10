@@ -26,10 +26,21 @@ void Square::SetState(SquareState state)
 	this->state = state;
 }
 
+uint8_t Square::GetOrigin() const
+{
+	return origin;
+}
+
+void Square::SetOrigin(uint8_t origin)
+{
+	this->origin = origin;
+}
+
 uint8_t Square::GetSize() const
 {
 	return size;
 }
+
 void Square::SetSize(uint8_t size)
 {
 	this->size = size;

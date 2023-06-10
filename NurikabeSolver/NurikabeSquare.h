@@ -23,6 +23,9 @@ namespace Nurikabe
 		void SetState(SquareState state);
 		SquareState GetState() const;
 
+		uint8_t GetOrigin() const;
+		void SetOrigin(uint8_t origin);
+
 		uint8_t GetSize() const;
 		void SetSize(uint8_t size);
 

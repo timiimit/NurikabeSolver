@@ -88,7 +88,12 @@ void Solver::SolvePerSquare()
 					region.SetState(square.GetState());
 					if (square.GetState() == SquareState::White)
 					{
-						//region.ForEach([](const Point&, Square& sq) { sq.SetOrigin(); });
+						auto iter = std::find(initialWhites.begin(), initialWhites.end(), pt);
+						if (iter != initialWhites.end())
+						{
+							int originIndex = iter - initialWhites.begin();
+							region.ForEach([originIndex](const Point&, Square& sq) { sq.SetOrigin((uint8_t)originIndex); return true; });
+						}
 					}
 				}
 			}
