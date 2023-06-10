@@ -22,6 +22,7 @@ namespace Nurikabe
 
 	public:
 		Solver(const Board& initialBoard);
+		Solver(const Solver& other);
 
 	private:
 		void SolveInitial();
@@ -31,6 +32,6 @@ namespace Nurikabe
 		void SolveGuess();
 
 	public:
-		bool Solve();
+		static bool Solve(Solver& solver);
 	};
 }

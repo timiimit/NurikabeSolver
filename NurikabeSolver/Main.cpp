@@ -12,7 +12,7 @@ int main()
 	board.Print(std::cout);
 
 	Nurikabe::Solver solver(board);
-	if (!solver.Solve())
+	if (!Nurikabe::Solver::Solve(solver))
 	{
 		printf("failed to solve given puzzle.\n\n");
 	}
