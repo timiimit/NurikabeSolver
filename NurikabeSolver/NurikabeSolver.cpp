@@ -88,7 +88,7 @@ void Solver::SolvePerSquare()
 					region.SetState(square.GetState());
 					if (square.GetState() == SquareState::White)
 					{
-						region.SetOrigin(pt);
+						//region.ForEach([](const Point&, Square& sq) { sq.SetOrigin(); });
 					}
 				}
 			}

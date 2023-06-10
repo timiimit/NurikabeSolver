@@ -3,7 +3,7 @@
 
 #include "NurikabeBoard.h"
 #include <fstream>
-#include <memory>
+#include <cstring>
 
 using namespace Nurikabe;
 
@@ -19,7 +19,7 @@ Board::Board(const Board& other)
 	, width(other.width)
 	, height(other.height)
 {
-	memcpy(squares, other.squares, sizeof(Square) * width * height);
+	std::memcpy(squares, other.squares, sizeof(Square) * width * height);
 }
 
 Board::~Board()
@@ -31,7 +31,7 @@ Board::~Board()
 	}
 }
 
-bool Board::operator==(const Board& other)
+bool Board::operator==(const Board& other) const
 {
 	for (int y = 0; y < other.GetHeight(); y++)
 	{
@@ -46,11 +46,6 @@ bool Board::operator==(const Board& other)
 		}
 	}
 	return true;
-}
-
-bool Board::operator!=(const Board& other)
-{
-	return !Board::operator==(other);
 }
 
 bool Board::Load(const char* filename)

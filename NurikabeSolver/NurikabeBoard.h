@@ -24,8 +24,7 @@ namespace Nurikabe
 		Board(const Board& other);
 		~Board();
 
-		bool operator==(const Board& other);
-		bool operator!=(const Board& other);
+		bool operator==(const Board& other) const;
 	public:
 		bool Load(const char* filename);
 		bool IsLoaded() const;
