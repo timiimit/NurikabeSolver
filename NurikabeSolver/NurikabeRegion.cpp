@@ -38,6 +38,14 @@ void Nurikabe::Region::SetState(SquareState state)
 	}
 }
 
+void Nurikabe::Region::SetSize(uint8_t size)
+{
+	for (int i = 0; i < squares.size(); i++)
+	{
+		board->Get(squares[i]).SetSize(size);
+	}
+}
+
 Region::Region()
 {
 	this->board = nullptr;

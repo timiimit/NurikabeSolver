@@ -27,6 +27,8 @@ namespace Nurikabe
 
 		// set state of all squares in this region
 		void SetState(SquareState state);
+		
+		void SetSize(uint8_t size);
 
 
 	public:

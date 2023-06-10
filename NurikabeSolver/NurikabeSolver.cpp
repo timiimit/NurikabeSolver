@@ -4,6 +4,11 @@
 using namespace Nurikabe;
 
 
+Square Solver::GetInitialWhite(int initialWhiteIndex)
+{
+	return board.Get(initialWhites[initialWhiteIndex]);
+}
+
 Solver::Solver(const Board& initialBoard)
 	: board(initialBoard)
 //	, flags(initialBoard)
@@ -82,26 +87,46 @@ void Solver::SolvePerSquare()
 			}
 			else
 			{
-				// If there's only one way to go, then go there
-
-				Region region = Region(&board, pt)
+				Region rColorContinuations = Region(&board, pt)
 					.ExpandAllInline([square](const Point&, Square& squareInner) {
 						return squareInner.GetState() == square.GetState();
-					})
-					.Neighbours([](const Point&, Square& squareInner) {
+					});
+					
+				auto rColorSize = rColorContinuations.GetSquareCount();
+
+				rColorContinuations = rColorContinuations.Neighbours([](const Point&, Square& squareInner) {
 						return squareInner.GetState() == SquareState::Unknown;
 					});
 
-				if (region.GetSquareCount() == 1)
+				if (rColorContinuations.GetSquareCount() == 1)
 				{
-					region.SetState(square.GetState());
+					// If there's only one way to go, then go there
+
+					rColorContinuations.SetState(square.GetState());
 					if (square.GetState() == SquareState::White)
+						rColorContinuations.SetSize(square.GetSize());
+				}
+				else if (rColorContinuations.GetSquareCount() == 2)
+				{
+					if (square.GetState() == SquareState::White && square.GetSize() - rColorSize == 1)
 					{
-						auto iter = std::find(initialWhites.begin(), initialWhites.end(), pt);
-						if (iter != initialWhites.end())
+						// Solve black on corner of white that's missing only 1 more square
+
+						Region rSquareContinuations = Region(&board, pt).Neighbours([](const Point&, Square& squareInner) {
+							return squareInner.GetState() == SquareState::Unknown;
+						});
+						if (rSquareContinuations.GetSquareCount() == 2)
 						{
-							int originIndex = iter - initialWhites.begin();
-							region.ForEach([originIndex](const Point&, Square& sq) { sq.SetOrigin((uint8_t)originIndex); return true; });
+							auto rSquareContinuationsDiagonal = rSquareContinuations.Neighbours([&pt](const Point& ptInner, Square& squareInner) {
+								if (Distance(ptInner.x, pt.x) != 1 || Distance(ptInner.y, pt.y) != 1)
+									return false;
+								return squareInner.GetState() == SquareState::Unknown;
+							});
+
+							if (rSquareContinuationsDiagonal.GetSquareCount() == 1)
+							{
+								rSquareContinuationsDiagonal.SetState(SquareState::Black);
+							}
 						}
 					}
 				}

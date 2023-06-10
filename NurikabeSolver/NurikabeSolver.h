@@ -17,6 +17,8 @@ namespace Nurikabe
 		std::vector<Point> initialWhites;
 		std::vector<int> unsolvedWhites;
 
+	public:
+		Square GetInitialWhite(int initialWhiteIndex);
 
 	public:
 		Solver(const Board& initialBoard);
