@@ -26,6 +26,7 @@ namespace Nurikabe
 		void SolvePerSquare();
 		void SolvePerUnsolvedWhite();
 		void SolveUnreachable();
+		void SolveGuess();
 
 	public:
 		bool Solve();

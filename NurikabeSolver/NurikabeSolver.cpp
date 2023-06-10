@@ -51,6 +51,7 @@ void Solver::SolvePerSquare()
 				if (whiteNeighbourCount > 1)
 				{
 					board.SetBlack(pt);
+					return true;
 				}
 
 
@@ -75,6 +76,9 @@ void Solver::SolvePerSquare()
 					}
 					return true;
 				});
+				
+				if (square.GetState() != SquareState::Unknown)
+					return true;
 			}
 			else
 			{
@@ -134,9 +138,43 @@ void Solver::SolvePerUnsolvedWhite()
 
 void Solver::SolveUnreachable()
 {
-	// for each non-final block, find unsolvedWhites that
-	// can reach it.
-	// if 0 such blocks can reach it, set it to final black
+	auto& initialWhites = this->initialWhites;
+	auto& unsolvedWhites = this->unsolvedWhites;
+	auto& board = this->board;
+
+	board.ForEachSquare([&initialWhites, &unsolvedWhites, &board](const Point& pt, Square& sq)
+	{
+		if (sq.GetState() != SquareState::Unknown)
+			return true;
+
+		bool isReachable = false;
+		for (int i = 0; i < unsolvedWhites.size() && !isReachable; i++)
+		{
+			auto& initialWhite = initialWhites[unsolvedWhites[i]];
+			auto region = Region(&board, initialWhite)
+				.ExpandAllInline([](const Point&, Square& sq) { return sq.GetState() == SquareState::White; });
+
+			auto regionSquaresLeft = board.Get(initialWhite).GetSize() - region.GetSquareCount();
+			
+			region.ForEach([&pt, &isReachable, regionSquaresLeft](const Point& ptInner, Square& sq)
+			{
+				if (Rules::CanReach(ptInner, pt, regionSquaresLeft))
+					isReachable = true;
+				return !isReachable;
+			});
+		}
+
+		if (!isReachable)
+			sq.SetState(SquareState::Black);
+
+		return true;
+	});
+}
+
+void Solver::SolveGuess()
+{
+	// out of multiple possible continuations
+	// pick one and go with it.
 
 }
 
@@ -162,6 +200,7 @@ bool Solver::Solve()
 			{
 				SolvePerSquare();
 				SolvePerUnsolvedWhite();
+				SolveUnreachable();
 			}
 			else
 			{
