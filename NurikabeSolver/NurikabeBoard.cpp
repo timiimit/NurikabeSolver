@@ -252,7 +252,7 @@ void Board::Print(std::ostream& stream) const
 			switch (val.GetState())
 			{
 			case SquareState::Unknown:
-				stream.put('_');
+				stream.put('?');
 				break;
 
 			case SquareState::White:

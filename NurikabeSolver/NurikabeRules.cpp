@@ -23,8 +23,9 @@ bool Rules::IsBlackContiguous(const Board& board)
 
 	if (pt.x == board.GetWidth() && pt.y == board.GetHeight())
 	{
-		// there is no black square which is technically
+		// there is no black square which technically
 		// probably satisfies our condition.
+		//
 		// if we have a 2x1 board and one square has 2
 		// as white size, then the board is solved even
 		// without any black squares
