@@ -241,6 +241,8 @@ void Solver::SolveDiverge(Solver& solver, std::stack<Solver>& solverStack)
 		sq.SetState(SquareState::White);
 		sq.SetSize(solver.board.GetRequiredSize(solver.initialWhites[solver.unsolvedWhites[min]]));
 		sq.SetOrigin(solver.unsolvedWhites[min]);
+		solverCopy.CheckForSolvedWhites();
+		
 		solverStack.push(std::move(solverCopy));
 	}
 }
@@ -287,6 +289,7 @@ int Solver::SolveWithRules(Solver& solver)
 bool Solver::Solve(Solver& initialSolver)
 {
 	initialSolver.Initialize();
+	initialSolver.CheckForSolvedWhites();
 
 	std::stack<Solver> solverStack;
 	solverStack.push(initialSolver);
