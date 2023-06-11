@@ -3,7 +3,7 @@
 
 using namespace Nurikabe;
 
-bool Nurikabe::Region::IsSameState() const
+bool Region::IsSameState() const
 {
 	if (squares.size() == 0)
 		return false;
@@ -22,7 +22,7 @@ bool Nurikabe::Region::IsSameState() const
 	return true;
 }
 
-bool Nurikabe::Region::IsSameOrigin() const
+bool Region::IsSameOrigin() const
 {
 	if (squares.size() == 0)
 		return false;
@@ -41,7 +41,21 @@ bool Nurikabe::Region::IsSameOrigin() const
 	return true;
 }
 
-SquareState Nurikabe::Region::GetState() const
+bool Region::IsContiguous() const
+{
+	if (squares.size() < 2)
+		return true;
+
+	const auto& squares = this->squares;
+
+	auto contiguous = Region(board, squares[0]).ExpandAllInline([&squares](const Point& pt, const Square& sq) {
+		return std::find(squares.begin(), squares.end(), pt) != squares.end();
+	});
+
+	return *this == contiguous;
+}
+
+SquareState Region::GetState() const
 {
 	if (squares.size() < 1)
 		return SquareState::Unknown;
@@ -49,7 +63,7 @@ SquareState Nurikabe::Region::GetState() const
 	return board->Get(squares[0]).GetState();
 }
 
-void Nurikabe::Region::SetState(SquareState state)
+void Region::SetState(SquareState state)
 {
 	for (int i = 0; i < squares.size(); i++)
 	{
@@ -57,7 +71,15 @@ void Nurikabe::Region::SetState(SquareState state)
 	}
 }
 
-void Nurikabe::Region::SetSize(uint8_t size)
+uint8_t Region::GetSize() const
+{
+	if (squares.size() < 1)
+		return ~0;
+
+	return board->Get(squares[0]).GetSize();
+}
+
+void Region::SetSize(uint8_t size)
 {
 	for (int i = 0; i < squares.size(); i++)
 	{
@@ -65,12 +87,40 @@ void Nurikabe::Region::SetSize(uint8_t size)
 	}
 }
 
-void Nurikabe::Region::SetOrigin(uint8_t origin)
+uint8_t Region::GetOrigin() const
+{
+	if (squares.size() < 1)
+		return ~0;
+
+	return board->Get(squares[0]).GetOrigin();
+}
+
+void Region::SetOrigin(uint8_t origin)
 {
 	for (int i = 0; i < squares.size(); i++)
 	{
 		board->Get(squares[i]).SetOrigin(origin);
 	}
+}
+
+
+bool Nurikabe::operator==(const Region& a, const Region& b)
+{
+	if (a.GetSquareCount() != b.GetSquareCount())
+		return false;
+
+	for (int i = 0; i < a.GetSquareCount(); i++)
+	{
+		if (!a.Contains(b.GetSquares()[i]))
+			return false;
+	}
+
+	return true;
+}
+
+bool Region::Contains(const Point& pt) const
+{
+	return std::find(squares.begin(), squares.end(), pt) != squares.end();
 }
 
 Region::Region()

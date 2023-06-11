@@ -208,6 +208,142 @@ void Solver::SolveUnreachable()
 	});
 }
 
+void Solver::SolveUnfinishedWhiteIsland()
+{
+	std::vector<int> badOrigins;
+
+	for (int i = 0; i < unsolvedWhites.size(); i++)
+	{
+		Point pt = initialWhites[unsolvedWhites[i]];
+
+		auto region = Region(&board, pt);
+
+		bool reachedAnotherOrigin = false;
+		uint8_t sourceOrigin = region.GetOrigin();
+		uint8_t sourceSize = region.GetSize();
+
+		if (std::find(badOrigins.begin(), badOrigins.end(), sourceOrigin) != badOrigins.end())
+			continue;
+
+		region.ExpandAllInline([&reachedAnotherOrigin, sourceOrigin, &badOrigins](const Point& pt, Square& square)
+		{
+			if (reachedAnotherOrigin)
+				return false;
+
+			if (square.GetState() == SquareState::White)
+			{
+				if (square.GetOrigin() != sourceOrigin)
+				{
+					reachedAnotherOrigin = true;
+
+					if (std::find(badOrigins.begin(), badOrigins.end(), sourceOrigin) == badOrigins.end())
+						badOrigins.push_back(square.GetOrigin());
+
+					return true;
+				}
+				return true;
+			}
+			else if (square.GetState() == SquareState::Unknown)
+			{
+				return true;
+			}
+
+			return false;
+		});
+
+		if (reachedAnotherOrigin)
+			continue;
+
+		if (region.GetSquareCount() == sourceSize)
+		{
+			region.SetState(SquareState::White);
+			region.SetSize(sourceSize);
+			region.SetOrigin(sourceOrigin);
+			CheckForSolvedWhites();
+		}
+		else if (region.GetSquareCount() > sourceSize)
+		{
+			auto white = Region(&board, pt).ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; });
+
+			bool isContiguous = true;
+			for (int si = 0; si < white.GetSquareCount(); si++)
+			{
+				auto whiteSingle = Region(&board, white.GetSquares()[si]);
+				if (!Region::Subtract(Region(whiteSingle).ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; }), whiteSingle).IsContiguous())
+				{
+					isContiguous = false;
+					break;
+				}
+			}
+			
+			if (isContiguous)
+				continue;
+
+			auto tmp = Region::Subtract(region, white);
+			auto tmpRet = tmp.IsContiguous();
+
+			auto pathsOut = white.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; });
+
+			std::vector<int> pathsOutSquareCount;
+			for (int pi = 0; pi < pathsOut.GetSquareCount(); pi++)
+			{
+				pathsOutSquareCount.push_back(
+					Region(&board, pathsOut.GetSquares()[pi])
+					.ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; })
+					.GetSquareCount()
+				);
+			}
+			std::vector<int> compute(pathsOutSquareCount.size(), 0);
+
+			auto missingSquares = sourceSize - white.GetSquareCount();
+
+			bool isExpansionPlausible = false;
+			for (int pi = 0; pi < pathsOutSquareCount.size(); pi++)
+			{
+				if (pathsOutSquareCount[pi] < missingSquares)
+				{
+					isExpansionPlausible = true;
+					break;
+				}
+			}
+
+			if (!isExpansionPlausible)
+				continue;
+
+			for (int pi = 0; pi < pathsOutSquareCount.size(); pi++)
+			{
+				auto remainingSquares = missingSquares;
+				for (int pj = 0; pj < pathsOutSquareCount.size(); pj++)
+				{
+					auto index = (pi + pj) % pathsOutSquareCount.size();
+
+					if (pathsOutSquareCount[index] > remainingSquares)
+					{
+						compute[index] = remainingSquares;
+
+						auto expandedWhite = Region(&board, pathsOut.GetSquares()[index]);
+						expandedWhite.SetState(SquareState::White);
+						expandedWhite.SetOrigin(sourceOrigin);
+						expandedWhite.SetSize(sourceSize);
+
+						// I don't believe this operation can ever finish white, but lets check just in case
+						CheckForSolvedWhites();
+
+						// Exit out of boths loops
+						pi = pathsOutSquareCount.size();
+						break;
+					}
+					else
+					{
+						remainingSquares -= pathsOutSquareCount[index];
+						compute[index] = pathsOutSquareCount[index];
+					}
+				}
+			}
+		}
+	}
+}
+
 void Solver::SolveDiverge(Solver& solver, std::stack<Solver>& solverStack)
 {
 	std::vector<Region> unsolvedWhiteRegions;
@@ -242,7 +378,7 @@ void Solver::SolveDiverge(Solver& solver, std::stack<Solver>& solverStack)
 		sq.SetSize(solver.board.GetRequiredSize(solver.initialWhites[solver.unsolvedWhites[min]]));
 		sq.SetOrigin(solver.unsolvedWhites[min]);
 		solverCopy.CheckForSolvedWhites();
-		
+
 		solverStack.push(std::move(solverCopy));
 	}
 }
@@ -269,6 +405,11 @@ int Solver::SolveWithRules(Solver& solver)
 		else if (phase == 1)
 		{
 			solver.SolveUnreachable();
+			solver.board.Print(std::cout);
+		}
+		else if (phase == 2)
+		{
+			solver.SolveUnfinishedWhiteIsland();
 			solver.board.Print(std::cout);
 		}
 		else

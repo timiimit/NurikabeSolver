@@ -22,6 +22,7 @@ namespace Nurikabe
 		// true if all squares in this region are of the same state
 		bool IsSameState() const;
 		bool IsSameOrigin() const;
+		bool IsContiguous() const;
 
 		// get state of all squares. undefined behavior if IsSameState returns false
 		SquareState GetState() const;
@@ -29,8 +30,15 @@ namespace Nurikabe
 		// set state of all squares in this region
 		void SetState(SquareState state);
 		
+		uint8_t GetSize() const;
 		void SetSize(uint8_t size);
+
+		uint8_t GetOrigin() const;
 		void SetOrigin(uint8_t size);
+
+		friend bool operator==(const Region& a, const Region& b);
+
+		bool Contains(const Point& pt) const;
 
 
 	public:

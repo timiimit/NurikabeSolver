@@ -29,9 +29,21 @@ namespace Nurikabe
 		void Initialize();
 
 	private:
+		/// @brief Solves with narrow-sighted, simple per square rules
 		void SolvePerSquare();
-		void CheckForSolvedWhites();
+
+		/// @brief Solves squares that cannot be reached by any white
 		void SolveUnreachable();
+
+		/// @brief Solves standalone islands by finding which squares are forced to white
+		void SolveUnfinishedWhiteIsland();
+
+		/// @brief Solves black+unknown region when there is only 1 way out from unknown region
+		void SolveBlackToUnblock();
+
+	private:
+		/// @brief Removes any solved white that is still in @p unsolvedWhites .
+		void CheckForSolvedWhites();
 
 	private:
 		static void SolveDiverge(Solver& solver, std::stack<Solver>& solverStack);
