@@ -162,12 +162,31 @@ bool Rules::IsSolvable(const Board& board)
 		.GetSquares();
 	
 	bool ret = true;
-	board.ForEachSquare([&squares, &ret](const Point& pt, const Square& sq)
+	board.ForEachSquare([&squares, &ret, &board](const Point& pt, const Square& sq)
 	{
 		if (sq.GetState() == SquareState::Black && std::find(squares.begin(), squares.end(), pt) == squares.end())
 		{
 			ret = false;
 			return false;
+		}
+
+		if (sq.GetState() == SquareState::White && sq.GetOrigin() == (uint8_t)~0)
+		{
+			int reachableOriginTouchingWhites = Region((Board*)&board, pt).ExpandAllInline([](const Point&, const Square& sqInner) {
+				return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() == (uint8_t)~0;
+			})
+			.ExpandAllInline([](const Point&, const Square& sqInner) {
+				return sqInner.GetState() == SquareState::Unknown;
+			})
+			.Neighbours([](const Point&, const Square& sqInner) {
+				return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() != (uint8_t)~0;
+			}).GetSquareCount();
+
+			if (reachableOriginTouchingWhites == 0)
+			{
+				ret = false;
+				return false;
+			}
 		}
 
 		return true;
