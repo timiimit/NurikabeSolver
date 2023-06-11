@@ -30,15 +30,17 @@ namespace Nurikabe
 		// set state of all squares in this region
 		void SetState(SquareState state);
 		
-		uint8_t GetSize() const;
+		uint8_t GetSameSize() const;
 		void SetSize(uint8_t size);
 
-		uint8_t GetOrigin() const;
+		uint8_t GetSameOrigin() const;
 		void SetOrigin(uint8_t size);
 
 		friend bool operator==(const Region& a, const Region& b);
 
 		bool Contains(const Point& pt) const;
+
+		void FixWhites();
 
 
 	public:

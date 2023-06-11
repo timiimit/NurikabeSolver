@@ -46,7 +46,7 @@ void Solver::SolvePerSquare()
 {
 	board.ForEachSquare([this](const Point& pt, Square& square)
 		{
-			if (pt == Point{3, 1})
+			if (pt == Point{4, 11})
 			{
 				int a = 0;
 			}
@@ -64,32 +64,45 @@ void Solver::SolvePerSquare()
 					return true;
 				}
 
+				Region blackNeighbours = Region(&board, pt).Neighbours([](const Point& pt, Square& square) {
+					return square.GetState() == SquareState::Black;
+				});
 
-				// Region diagonals = Region(&board, pt)
-				// 	.Neighbours([](const Point& pt, Square& square) {
-				// 		return square.GetState() == SquareState::Black;
-				// 	})
-				// 	.Neighbours([&pt](const Point& ptDiag, Square& square) {
-				// 		if (Distance(ptDiag.x, pt.x) > 1)
-				// 			return false;
+				if (blackNeighbours.GetSquareCount() == 4)
+				{
+					board.SetBlack(pt);
+					return true;
+				}
 
-				// 		return square.GetState() == SquareState::Black;
-				// 	});
+				// handle case where there are 3 black and 1 unknown square in 2x2
+				Region blackDiagonalNeighbours = blackNeighbours.Neighbours([&pt](const Point& ptInner, Square& square) {
+					return
+						Distance(pt.x, ptInner.x) == 1 &&
+						Distance(pt.y, ptInner.y) == 1 &&
+						square.GetState() == SquareState::Black;
+				});
 
-				// diagonals.ForEach([this, &pt](const Point& ptDiag, Square& square) {
-				// 	Point delta = pt - ptDiag;
-				// 	if (board.IsBlack(Point{ ptDiag.x + delta.x, ptDiag.y }) &&
-				// 		board.IsBlack(Point{ ptDiag.x, ptDiag.y + delta.y }))
-				// 	{
-				// 		board.SetWhite(pt);
-				// 		CheckForSolvedWhites();
-				// 		return false;
-				// 	}
-				// 	return true;
-				// });
-				
-				// if (square.GetState() != SquareState::Unknown)
-				// 	return true;
+				blackDiagonalNeighbours.ForEach([&pt, &square, this](const Point& ptInner, Square&) {
+					Point delta = pt - ptInner;
+					if (board.IsBlack(Point{ ptInner.x + delta.x, ptInner.y }) &&
+						board.IsBlack(Point{ ptInner.x, ptInner.y + delta.y }))
+					{
+						// we found a lone white square, we need to connect it logically
+						square.SetState(SquareState::White);
+						return false;
+					}
+					return true;
+				});
+
+				if (square.GetState() == SquareState::White)
+				{
+					if (pt == Point{4,10})
+					{
+						int a = 0;
+					}
+					CheckForSolvedWhites();
+					return true;
+				}
 			}
 			else
 			{
@@ -112,10 +125,10 @@ void Solver::SolvePerSquare()
 					if (square.GetState() == SquareState::White)
 					{
 						rColorContinuations.SetSize(square.GetSize());
-						assert(square.GetOrigin() != 127);
 						rColorContinuations.SetOrigin(square.GetOrigin());
 						CheckForSolvedWhites();
 					}
+					return true;
 				}
 				else if (rColorContinuations.GetSquareCount() == 2)
 				{
@@ -158,6 +171,7 @@ void Solver::CheckForSolvedWhites()
 				{
 					return square.GetState() == SquareState::White;
 				});
+		region.FixWhites();
 
 		if (board.GetRequiredSize(pt) == region.GetSquareCount())
 		{
@@ -171,6 +185,8 @@ void Solver::CheckForSolvedWhites()
 			continue;
 		}
 	}
+
+	SolveUnfinishedWhiteIsland();
 }
 
 void Solver::SolveUnreachable()
@@ -219,8 +235,8 @@ void Solver::SolveUnfinishedWhiteIsland()
 		auto region = Region(&board, pt);
 
 		bool reachedAnotherOrigin = false;
-		uint8_t sourceOrigin = region.GetOrigin();
-		uint8_t sourceSize = region.GetSize();
+		uint8_t sourceOrigin = region.GetSameOrigin();
+		uint8_t sourceSize = region.GetSameSize();
 
 		if (std::find(badOrigins.begin(), badOrigins.end(), sourceOrigin) != badOrigins.end())
 			continue;
@@ -232,7 +248,7 @@ void Solver::SolveUnfinishedWhiteIsland()
 
 			if (square.GetState() == SquareState::White)
 			{
-				if (square.GetOrigin() != sourceOrigin)
+				if (square.GetOrigin() != (uint8_t)~0 && square.GetOrigin() != sourceOrigin)
 				{
 					reachedAnotherOrigin = true;
 
@@ -388,8 +404,9 @@ void Solver::SolveDiverge(Solver& solver, std::stack<Solver>& solverStack)
 		sq.SetSize(solver.board.GetRequiredSize(solver.initialWhites[solver.unsolvedWhites[min]]));
 		sq.SetOrigin(solver.unsolvedWhites[min]);
 		solverCopy.CheckForSolvedWhites();
-
-		solverStack.push(std::move(solverCopy));
+		
+		if (Rules::IsSolvable(solverCopy.board))
+			solverStack.push(std::move(solverCopy));
 	}
 }
 

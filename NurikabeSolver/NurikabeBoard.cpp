@@ -38,11 +38,8 @@ bool Board::operator==(const Board& other) const
 		for (int x = 0; x < other.GetWidth(); x++)
 		{
 			Point pt = { x, y };
-			if (GetRequiredSize(pt) != other.GetRequiredSize(pt) ||
-				IsBlack(pt) != other.IsBlack(pt))
-			{
+			if (Get(pt) != other.Get(pt))
 				return false;
-			}
 		}
 	}
 	return true;

@@ -15,9 +15,9 @@ namespace Nurikabe
 
 	class Square
 	{
-		SquareState state : 2;
-		uint8_t origin : 7;
-		uint8_t size : 7;
+		SquareState state;// : 2;
+		uint8_t origin;// : 7;
+		uint8_t size;// : 7;
 
 	public:
 		void SetState(SquareState state);
@@ -32,6 +32,9 @@ namespace Nurikabe
 	public:
 		Square(SquareState state, uint8_t size);
 		Square();
+
+	public:
+		bool operator==(const Square& other) const;
 	};
 
 	typedef std::function<bool(const Point& point, Square& square)> PointSquareDelegate;

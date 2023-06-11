@@ -24,18 +24,23 @@ bool Region::IsSameState() const
 
 bool Region::IsSameOrigin() const
 {
-	if (squares.size() == 0)
-		return false;
-	if (squares.size() == 1)
-		return true;
+	uint8_t invalidVal = ~0;
 
-	auto origin = board->Get(squares[0]).GetOrigin();
+	if (squares.size() == 0)
+		return invalidVal;
+
+	auto val = invalidVal;
 	for (int i = 0; i < squares.size(); i++)
 	{
-		if (board->Get(squares[i]).GetOrigin() != origin)
-		{
+		auto sqVal = board->Get(squares[i]).GetOrigin();
+		if (sqVal == invalidVal)
+			continue;
+
+		if (val == invalidVal)
+			val = sqVal;
+		
+		if (sqVal != val)
 			return false;
-		}
 	}
 
 	return true;
@@ -71,12 +76,28 @@ void Region::SetState(SquareState state)
 	}
 }
 
-uint8_t Region::GetSize() const
+uint8_t Region::GetSameSize() const
 {
-	if (squares.size() < 1)
-		return ~0;
+	uint8_t invalidVal = 0;
 
-	return board->Get(squares[0]).GetSize();
+	if (squares.size() == 0)
+		return invalidVal;
+
+	auto val = invalidVal;
+	for (int i = 0; i < squares.size(); i++)
+	{
+		auto sqVal = board->Get(squares[i]).GetSize();
+		if (sqVal == invalidVal)
+			continue;
+
+		if (val == invalidVal)
+			val = sqVal;
+		
+		if (sqVal != val)
+			return invalidVal;
+	}
+
+	return val;
 }
 
 void Region::SetSize(uint8_t size)
@@ -87,12 +108,28 @@ void Region::SetSize(uint8_t size)
 	}
 }
 
-uint8_t Region::GetOrigin() const
+uint8_t Region::GetSameOrigin() const
 {
-	if (squares.size() < 1)
-		return ~0;
+	uint8_t invalidVal = ~0;
 
-	return board->Get(squares[0]).GetOrigin();
+	if (squares.size() == 0)
+		return invalidVal;
+
+	auto val = invalidVal;
+	for (int i = 0; i < squares.size(); i++)
+	{
+		auto sqVal = board->Get(squares[i]).GetOrigin();
+		if (sqVal == invalidVal)
+			continue;
+
+		if (val == invalidVal)
+			val = sqVal;
+		
+		if (sqVal != val)
+			return invalidVal;
+	}
+
+	return val;
 }
 
 void Region::SetOrigin(uint8_t origin)
@@ -121,6 +158,17 @@ bool Nurikabe::operator==(const Region& a, const Region& b)
 bool Region::Contains(const Point& pt) const
 {
 	return std::find(squares.begin(), squares.end(), pt) != squares.end();
+}
+
+void Region::FixWhites()
+{
+	auto origin = GetSameOrigin();
+	if (origin != (uint8_t)~0)
+		SetOrigin(origin);
+	
+	auto size = GetSameSize();
+	if (size != 0)
+		SetSize(size);
 }
 
 Region::Region()
