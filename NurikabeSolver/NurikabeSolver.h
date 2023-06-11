@@ -2,6 +2,7 @@
 #include "NurikabeRules.h"
 #include "NurikabeBoard.h"
 #include <vector>
+#include <stack>
 
 namespace Nurikabe
 {
@@ -29,7 +30,10 @@ namespace Nurikabe
 		void SolvePerSquare();
 		void SolvePerUnsolvedWhite();
 		void SolveUnreachable();
-		void SolveGuess();
+
+	private:
+		static void SolveDiverge(Solver& solver, std::stack<Solver>& solverStack);
+		static int SolveWithRules(Solver& solver);
 
 	public:
 		static bool Solve(Solver& solver);

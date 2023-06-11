@@ -1,6 +1,5 @@
 #include "NurikabeSolver.h"
 #include <iostream>
-#include <queue>
 
 using namespace Nurikabe;
 
@@ -204,115 +203,116 @@ void Solver::SolveUnreachable()
 	});
 }
 
-void Solver::SolveGuess()
+void Solver::SolveDiverge(Solver& solver, std::stack<Solver>& solverStack)
 {
-	// out of multiple possible continuations
-	// pick one and go with it.
+	std::vector<Region> unsolvedWhiteRegions;
 
+	for (int i = 0; i < solver.unsolvedWhites.size(); i++)
+	{
+		unsolvedWhiteRegions.push_back(
+			Region(&solver.board, solver.initialWhites[i])
+			.ExpandAllInline([](const Point&, Square& sq){
+				return sq.GetState() == SquareState::White;
+			})
+			.Neighbours([](const Point&, Square& sq){
+				return sq.GetState() == SquareState::Unknown;
+			})
+		);
+	}
+
+	int min = 0;
+	for (int i = 1; i < unsolvedWhiteRegions.size(); i++)
+	{
+		if (unsolvedWhiteRegions[i].GetSquareCount() < unsolvedWhiteRegions[min].GetSquareCount())
+			min = i;
+	}
+
+	auto& bestRegion = unsolvedWhiteRegions[min];
+
+	for (int i = 0; i < bestRegion.GetSquareCount(); i++)
+	{
+		auto solverCopy = Solver(solver);
+		solverCopy.board.SetWhite(bestRegion.GetSquares()[i]);
+		solverCopy.board.SetSize(bestRegion.GetSquares()[i], solver.board.GetRequiredSize(solver.initialWhites[min]));
+		solverStack.push(std::move(solverCopy));
+	}
 }
 
-bool Solver::Solve(Solver& solver)
+int Solver::SolveWithRules(Solver& solver)
 {
-	solver.SolveInitial();
-	solver.board.Print(std::cout);
+	int iteration = 0;
+	int phase = 0;
+	bool hasChangedInPrevLoop = true;
 
-	std::queue<Solver> solverStack;
-	solverStack.push(solver);
+	while (!Rules::IsSolved(solver.board))
+	{
+		Board boardIterationStart = solver.board;
+
+		int phasePrev = phase;
+		int iterationPrev = iteration;
+		iteration++;
+
+		if (phase == 0)
+		{
+			solver.SolvePerSquare();
+			solver.SolvePerUnsolvedWhite();
+		}
+		else if (phase == 1)
+		{
+			solver.SolveUnreachable();
+		}
+		else
+		{
+			solver.board.Print(std::cout);
+			break;
+		}
+
+		//std::cout << "Phase #" << phasePrev << " - Iteration #" << iterationPrev << std::endl;
+		//currentSolver.board.Print(std::cout);
+
+		hasChangedInPrevLoop = (solver.board != boardIterationStart);
+		if (!hasChangedInPrevLoop)
+			phase++;
+		else
+			phase = 0;
+	}
+
+	return iteration;
+}
+
+bool Solver::Solve(Solver& initialSolver)
+{
+	initialSolver.SolveInitial();
+	initialSolver.board.Print(std::cout);
+
+	std::stack<Solver> solverStack;
+	solverStack.push(initialSolver);
 
 	int iteration = 0;
 	while (true)
 	{
-		int phase = 0;
-		bool hasChangedInPrevLoop = true;
-
 		if (solverStack.size() == 0)
 		{
 			std::cout << "Unable to solve provided board" << std::endl;
 			return false;
 		}
 
-		Solver currentSolver = solverStack.front();
+		Solver solver = std::move(solverStack.top());
 		solverStack.pop();
 
-		while (!Rules::IsSolved(currentSolver.board))
-		{
-			Board boardIterationStart = currentSolver.board;
+		iteration += SolveWithRules(solver);
 
-			int phasePrev = phase;
-			int iterationPrev = iteration;
-			iteration++;
-
-			if (phase == 0)
-			{
-				currentSolver.SolvePerSquare();
-				currentSolver.board.Print(std::cout);
-				currentSolver.SolvePerUnsolvedWhite();
-				currentSolver.board.Print(std::cout);
-			}
-			else if (phase == 1)
-			{
-				currentSolver.SolveUnreachable();
-				currentSolver.board.Print(std::cout);
-			}
-			else
-			{
-				break;
-			}
-
-			std::cout << "Phase #" << phasePrev << " - Iteration #" << iterationPrev << std::endl;
-			currentSolver.board.Print(std::cout);
-
-			hasChangedInPrevLoop = (currentSolver.board != boardIterationStart);
-			if (!hasChangedInPrevLoop)
-				phase++;
-			else
-				phase = 0;
-		}
-
-		if (Rules::IsSolved(currentSolver.board))
+		if (Rules::IsSolved(solver.board))
 		{
 			std::cout << "   --- Starting board ---   " << std::endl;
-			solver.board.Print(std::cout);
+			initialSolver.board.Print(std::cout);
 			std::cout << "   ---  Solved board  ---   " << std::endl;
-			currentSolver.board.Print(std::cout);
+			solver.board.Print(std::cout);
 			break;
 		}
-		else if (currentSolver.unsolvedWhites.size())
-		{
-			// Push boards with multiple continuation options to stack and continue trying to solve those
-
-			std::vector<Region> unsolvedWhiteRegions;
-
-			for (int i = 0; i < currentSolver.unsolvedWhites.size(); i++)
-			{
-				unsolvedWhiteRegions.push_back(
-					Region(&currentSolver.board, currentSolver.initialWhites[i])
-					.ExpandAllInline([](const Point&, Square& sq){
-						return sq.GetState() == SquareState::White;
-					})
-					.Neighbours([](const Point&, Square& sq){
-						return sq.GetState() == SquareState::Unknown;
-					})
-				);
-			}
-
-			int min = 0;
-			for (int i = 1; i < unsolvedWhiteRegions.size(); i++)
-			{
-				if (unsolvedWhiteRegions[i].GetSquareCount() < unsolvedWhiteRegions[min].GetSquareCount())
-					min = i;
-			}
-
-			auto& bestRegion = unsolvedWhiteRegions[min];
-
-			for (int i = 0; i < bestRegion.GetSquareCount(); i++)
-			{
-				auto solverCopy = Solver(currentSolver);
-				solverCopy.board.SetWhite(bestRegion.GetSquares()[i]);
-				solverCopy.board.SetSize(bestRegion.GetSquares()[i], currentSolver.board.GetRequiredSize(currentSolver.initialWhites[min]));
-				solverStack.push(std::move(solverCopy));
-			}
-		}
+		
+		if (solver.unsolvedWhites.size())
+			SolveDiverge(solver, solverStack);
 	}
 	return true;
 }
