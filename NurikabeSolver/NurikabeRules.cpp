@@ -143,10 +143,13 @@ bool Rules::IsSolved(const Board& board)
 
 bool Rules::IsSolvable(const Board& board)
 {
+	if (ContainsBlack2x2(board))
+		return false;
+
 	Point pt;
-	if (!Rules::FindAnySquareOfState(board, SquareState::Black, pt))
+	if (!FindAnySquareOfState(board, SquareState::Black, pt))
 	{
-		if (!Rules::FindAnySquareOfState(board, SquareState::Unknown, pt))
+		if (!FindAnySquareOfState(board, SquareState::Unknown, pt))
 		{
 			// TODO: handle edge case where there are only white squares
 			assert(0);
