@@ -275,7 +275,7 @@ void Solver::SolveUnfinishedWhiteIsland()
 					break;
 				}
 			}
-			
+
 			if (isContiguous)
 				continue;
 
@@ -364,8 +364,18 @@ void Solver::SolveDiverge(Solver& solver, std::stack<Solver>& solverStack)
 	int min = 0;
 	for (int i = 1; i < unsolvedWhiteRegions.size(); i++)
 	{
-		if (unsolvedWhiteRegions[i].GetSquareCount() < unsolvedWhiteRegions[min].GetSquareCount())
+		int iSize = solver.board.GetRequiredSize(solver.initialWhites[solver.unsolvedWhites[i]]);
+		int minSize = solver.board.GetRequiredSize(solver.initialWhites[solver.unsolvedWhites[min]]);
+		if (iSize < minSize)
+		{
 			min = i;
+		}
+		else if (
+			iSize == minSize &&
+			unsolvedWhiteRegions[i].GetSquareCount() < unsolvedWhiteRegions[min].GetSquareCount())
+		{
+			min = i;
+		}
 	}
 
 	auto& bestRegion = unsolvedWhiteRegions[min];
