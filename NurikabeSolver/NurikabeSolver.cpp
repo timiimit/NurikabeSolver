@@ -210,7 +210,7 @@ void Solver::SolveDiverge(Solver& solver, std::stack<Solver>& solverStack)
 	for (int i = 0; i < solver.unsolvedWhites.size(); i++)
 	{
 		unsolvedWhiteRegions.push_back(
-			Region(&solver.board, solver.initialWhites[i])
+			Region(&solver.board, solver.initialWhites[solver.unsolvedWhites[i]])
 			.ExpandAllInline([](const Point&, Square& sq){
 				return sq.GetState() == SquareState::White;
 			})
