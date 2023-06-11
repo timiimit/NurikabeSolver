@@ -21,6 +21,7 @@ namespace Nurikabe
 	public:
 		// true if all squares in this region are of the same state
 		bool IsSameState() const;
+		bool IsSameOrigin() const;
 
 		// get state of all squares. undefined behavior if IsSameState returns false
 		SquareState GetState() const;
@@ -29,6 +30,7 @@ namespace Nurikabe
 		void SetState(SquareState state);
 		
 		void SetSize(uint8_t size);
+		void SetOrigin(uint8_t size);
 
 
 	public:

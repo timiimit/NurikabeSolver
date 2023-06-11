@@ -59,6 +59,7 @@ namespace Nurikabe
 
 	public:
 		void ForEachSquare(const PointSquareDelegate& callback);
+		void ForEachSquare(const PointSquareConstDelegate& callback) const;
 
 		void Print(std::ostream& stream) const;
 	};

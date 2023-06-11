@@ -2,26 +2,32 @@
 #include "Point.h"
 #include <vector>
 #include <queue>
+#include <assert.h>
 
 using namespace Nurikabe;
 
-bool Rules::IsBlackContiguous(const Board& board)
+bool Rules::FindAnySquareOfState(const Board& board, SquareState state, Point& out)
 {
-	// find any black
-	Point pt;
-	for (pt.y = 0; pt.y < board.GetHeight(); pt.y++)
+	for (out.y = 0; out.y < board.GetHeight(); out.y++)
 	{
-		for (pt.x = 0; pt.x < board.GetWidth(); pt.x++)
+		for (out.x = 0; out.x < board.GetWidth(); out.x++)
 		{
-			if (board.IsBlack(pt))
-				break;
+			if (board.Get(out).GetState() == state)
+				return true;
 		}
 
-		if (board.IsBlack(pt))
-			break;
+		if (board.Get(out).GetState() == state)
+			return true;
 	}
+	
+	return false;
+}
 
-	if (pt.x == board.GetWidth() && pt.y == board.GetHeight())
+bool Rules::IsBlackContiguous(const Board& board)
+{
+	Point pt;
+
+	if (!FindAnySquareOfState(board, SquareState::Black, pt))
 	{
 		// there is no black square which technically
 		// probably satisfies our condition.
@@ -33,7 +39,11 @@ bool Rules::IsBlackContiguous(const Board& board)
 	}
 
 	// search for all connecting blacks
-	std::vector<Point> all = FindConnectingSquares(board, pt);
+	Region all = Region((Board*)&board, pt);
+	SquareState state = all.GetState();
+	all.ExpandAllInline([state](const Point&, const Square& sq) {
+		return sq.GetState() == state;
+	});
 
 	// look through remainder of squares and check
 	// if there exists a black that is not in "all"
@@ -43,7 +53,7 @@ bool Rules::IsBlackContiguous(const Board& board)
 		{
 			if (board.IsBlack(pt))
 			{
-				if (std::find(all.begin(), all.end(), pt) == all.end())
+				if (std::find(all.GetSquares().begin(), all.GetSquares().end(), pt) == all.GetSquares().end())
 					return false;
 			}
 		}
@@ -76,24 +86,27 @@ bool Rules::IsProperSize(const Board& board, const Point& pt)
 	if (required == 0)
 		return true;
 
-	auto count = FindConnectingSquares(board, pt).size();
-	return count == required;
+	Region r = Region((Board*)&board, pt);
+	SquareState state = r.GetState();
+	r.ExpandAllInline([state](const Point&, const Square& sq) {
+		return sq.GetState() == state;
+	});
+
+	return r.GetSquareCount() == required;
 }
 
 bool Rules::IsTouchingAnother(const Board& board, const Point& pt)
 {
-	auto touching = FindConnectingSquares(board, pt);
-	int count = 0;
-	for (int i = 0; i < touching.size(); i++)
-	{
-		if (board.GetRequiredSize(touching[i]) > 0)
-		{
-			count++;
-			if (count > 1)
-				return true;
-		}
-	}
-	return false;
+	Region r = Region((Board*)&board, pt);
+
+	if (r.GetState() != SquareState::White)
+		return false;
+	
+	r.ExpandAllInline([](const Point&, const Square& sq) {
+		return sq.GetState() == SquareState::White;
+	});
+
+	return !r.IsSameOrigin();
 }
 
 bool Rules::IsSolved(const Board& board)
@@ -104,101 +117,60 @@ bool Rules::IsSolved(const Board& board)
 	if (ContainsBlack2x2(board))
 		return false;
 
-	for (int y = 0; y < board.GetHeight(); y++)
-	{
-		for (int x = 0; x < board.GetWidth(); x++)
-		{
-			Point pt = { x, y };
-			if (board.IsWhite(pt) && board.GetRequiredSize(pt) > 0)
-			{
-				if (!IsProperSize(board, pt))
-					return false;
+	bool ret = true;
 
-				if (IsTouchingAnother(board, pt))
-					return false;
+	board.ForEachSquare([&board, &ret](const Point& pt, const Square& sq)
+	{
+		if (board.IsWhite(pt) && board.GetRequiredSize(pt) > 0)
+		{
+			if (!IsProperSize(board, pt))
+			{
+				ret = false;
+				return false;
+			}
+
+			if (IsTouchingAnother(board, pt))
+			{
+				ret = false;
+				return false;
 			}
 		}
-	}
+		return true;
+	});
 
-	return true;
+	return ret;
 }
 
-std::vector<Point> Rules::FindConnectingSquares(const Board& board, const Point& pt)
+bool Rules::IsSolvable(const Board& board)
 {
-	std::vector<Point> all;
-	std::vector<Point> border;
-	border.push_back(pt);
-
-	bool isBlack = board.IsBlack(pt);
-	auto AddIfNewAndValid = [&board, &all, &border, isBlack](const Point& pt)
+	Point pt;
+	if (!Rules::FindAnySquareOfState(board, SquareState::Black, pt))
 	{
-		if (board.IsValidPosition(pt) && board.IsBlack(pt) == isBlack)
+		if (!Rules::FindAnySquareOfState(board, SquareState::Unknown, pt))
 		{
-			auto itAll = std::find(all.begin(), all.end(), pt);
-			auto itBorder = std::find(border.begin(), border.end(), pt);
-			if (itAll == all.end() && itBorder == border.end())
-			{
-				border.push_back(pt);
-			}
-		}
-	};
-
-	while (border.size())
-	{
-		Point current = border.back();
-		border.pop_back();
-
-		all.push_back(current);
-
-		for (int i = 0; i < all.size(); i++)
-		{
-			AddIfNewAndValid(current.Left());
-			AddIfNewAndValid(current.Right());
-			AddIfNewAndValid(current.Up());
-			AddIfNewAndValid(current.Down());
+			// TODO: handle edge case where there are only white squares
+			assert(0);
 		}
 	}
-	return all;
-}
-
-std::vector<Point> Nurikabe::Rules::FindOverlappingConnectingSquares(const Board& board1, const Board& board2, const Point& pt)
-{
-	std::vector<Point> all;
-	std::vector<Point> border;
-	border.push_back(pt);
-
-	bool isBlack1 = board1.IsBlack(pt);
-	bool isBlack2 = board2.IsBlack(pt);
-	auto AddIfNewAndValid = [&board1, &board2, &all, &border, isBlack1, isBlack2](const Point& pt)
+	auto squares = Region((Board*)&board, pt)
+		.ExpandAllInline([](const Point&, const Square& sq) {
+			return sq.GetState() == SquareState::Black || sq.GetState() == SquareState::Unknown;
+		})
+		.GetSquares();
+	
+	bool ret = true;
+	board.ForEachSquare([&squares, &ret](const Point& pt, const Square& sq)
 	{
-		if (board1.IsValidPosition(pt) && board1.IsBlack(pt) == isBlack1 &&
-			board2.IsValidPosition(pt) && board2.IsBlack(pt) == isBlack2)
+		if (sq.GetState() == SquareState::Black && std::find(squares.begin(), squares.end(), pt) == squares.end())
 		{
-			auto itAll = std::find(all.begin(), all.end(), pt);
-			auto itBorder = std::find(border.begin(), border.end(), pt);
-			if (itAll == all.end() && itBorder == border.end())
-			{
-				border.push_back(pt);
-			}
+			ret = false;
+			return false;
 		}
-	};
 
-	while (border.size())
-	{
-		Point current = border.back();
-		border.pop_back();
+		return true;
+	});
 
-		all.push_back(current);
-
-		for (int i = 0; i < all.size(); i++)
-		{
-			AddIfNewAndValid(current.Left());
-			AddIfNewAndValid(current.Right());
-			AddIfNewAndValid(current.Up());
-			AddIfNewAndValid(current.Down());
-		}
-	}
-	return all;
+	return ret;
 }
 
 int Rules::FindDistance(const Point& start, const Point& end)

@@ -1,5 +1,6 @@
 #include "NurikabeSolver.h"
 #include <iostream>
+#include <assert.h>
 
 using namespace Nurikabe;
 
@@ -23,85 +24,83 @@ Solver::Solver(const Solver& other)
 
 }
 
-void Solver::SolveInitial()
+void Solver::Initialize()
 {
 	board.ForEachSquare([this](const Point& pt, Square& square)
 		{
-			if (square.GetSize() == 1)
-			{
-				Region(&board, pt)
-					.Neighbours()
-					.SetState(SquareState::Black);
-			}
-
 			if (square.GetSize() != 0)
 			{
+				// determine this white's ID
+				board.Get(pt).SetOrigin((uint8_t)initialWhites.size());
+
 				// add this white to our lists
-				if (square.GetSize() != 1)
-					unsolvedWhites.push_back((int)initialWhites.size());
+				unsolvedWhites.push_back((int)initialWhites.size());
 				initialWhites.push_back(pt);
 			}
 
 			return true;
 		});
-
-	SolveUnreachable();
 }
 
 void Solver::SolvePerSquare()
 {
 	board.ForEachSquare([this](const Point& pt, Square& square)
 		{
+			if (pt == Point{3, 1})
+			{
+				int a = 0;
+			}
+
 			if (square.GetState() == SquareState::Unknown)
 			{
-				int whiteNeighbourCount = Region(&board, pt)
+				Region whiteNeighbours = Region(&board, pt)
 					.Neighbours([](const Point& pt, Square& square) {
 						return square.GetState() == SquareState::White;
-					})
-					.GetSquareCount();
+					});
 
-				if (whiteNeighbourCount > 1)
+				if (whiteNeighbours.GetSquareCount() > 1 && !whiteNeighbours.IsSameOrigin())
 				{
 					board.SetBlack(pt);
 					return true;
 				}
 
 
-				Region diagonals = Region(&board, pt)
-					.Neighbours([](const Point& pt, Square& square) {
-						return square.GetState() == SquareState::Black;
-					})
-					.Neighbours([&pt](const Point& ptDiag, Square& square) {
-						if (Distance(ptDiag.x, pt.x) > 1)
-							return false;
+				// Region diagonals = Region(&board, pt)
+				// 	.Neighbours([](const Point& pt, Square& square) {
+				// 		return square.GetState() == SquareState::Black;
+				// 	})
+				// 	.Neighbours([&pt](const Point& ptDiag, Square& square) {
+				// 		if (Distance(ptDiag.x, pt.x) > 1)
+				// 			return false;
 
-						return square.GetState() == SquareState::Black;
-					});
+				// 		return square.GetState() == SquareState::Black;
+				// 	});
 
-				diagonals.ForEach([this, &pt](const Point& ptDiag, Square& square) {
-					Point delta = pt - ptDiag;
-					if (board.IsBlack(Point{ ptDiag.x + delta.x, ptDiag.y }) &&
-						board.IsBlack(Point{ ptDiag.x, ptDiag.y + delta.y }))
-					{
-						board.SetWhite(pt);
-						return false;
-					}
-					return true;
-				});
+				// diagonals.ForEach([this, &pt](const Point& ptDiag, Square& square) {
+				// 	Point delta = pt - ptDiag;
+				// 	if (board.IsBlack(Point{ ptDiag.x + delta.x, ptDiag.y }) &&
+				// 		board.IsBlack(Point{ ptDiag.x, ptDiag.y + delta.y }))
+				// 	{
+				// 		board.SetWhite(pt);
+				// 		CheckForSolvedWhites();
+				// 		return false;
+				// 	}
+				// 	return true;
+				// });
 				
-				if (square.GetState() != SquareState::Unknown)
-					return true;
+				// if (square.GetState() != SquareState::Unknown)
+				// 	return true;
 			}
 			else
 			{
-				Region rColorContinuations = Region(&board, pt)
+				Region rColor = Region(&board, pt)
 					.ExpandAllInline([square](const Point&, Square& squareInner) {
 						return squareInner.GetState() == square.GetState();
 					});
 					
-				auto rColorSize = rColorContinuations.GetSquareCount();
+				auto rColorSize = rColor.GetSquareCount();
 
-				rColorContinuations = rColorContinuations.Neighbours([](const Point&, Square& squareInner) {
+				Region rColorContinuations = rColor.Neighbours([](const Point&, Square& squareInner) {
 						return squareInner.GetState() == SquareState::Unknown;
 					});
 
@@ -111,7 +110,12 @@ void Solver::SolvePerSquare()
 
 					rColorContinuations.SetState(square.GetState());
 					if (square.GetState() == SquareState::White)
+					{
 						rColorContinuations.SetSize(square.GetSize());
+						assert(square.GetOrigin() != 127);
+						rColorContinuations.SetOrigin(square.GetOrigin());
+						CheckForSolvedWhites();
+					}
 				}
 				else if (rColorContinuations.GetSquareCount() == 2)
 				{
@@ -133,6 +137,7 @@ void Solver::SolvePerSquare()
 							if (rSquareContinuationsDiagonal.GetSquareCount() == 1)
 							{
 								rSquareContinuationsDiagonal.SetState(SquareState::Black);
+								return true;
 							}
 						}
 					}
@@ -143,7 +148,7 @@ void Solver::SolvePerSquare()
 		});
 }
 
-void Solver::SolvePerUnsolvedWhite()
+void Solver::CheckForSolvedWhites()
 {
 	for (int i = 0; i < unsolvedWhites.size(); i++)
 	{
@@ -232,8 +237,10 @@ void Solver::SolveDiverge(Solver& solver, std::stack<Solver>& solverStack)
 	for (int i = 0; i < bestRegion.GetSquareCount(); i++)
 	{
 		auto solverCopy = Solver(solver);
-		solverCopy.board.SetWhite(bestRegion.GetSquares()[i]);
-		solverCopy.board.SetSize(bestRegion.GetSquares()[i], solver.board.GetRequiredSize(solver.initialWhites[min]));
+		auto& sq = solverCopy.board.Get(bestRegion.GetSquares()[i]);
+		sq.SetState(SquareState::White);
+		sq.SetSize(solver.board.GetRequiredSize(solver.initialWhites[solver.unsolvedWhites[min]]));
+		sq.SetOrigin(solver.unsolvedWhites[min]);
 		solverStack.push(std::move(solverCopy));
 	}
 }
@@ -255,20 +262,17 @@ int Solver::SolveWithRules(Solver& solver)
 		if (phase == 0)
 		{
 			solver.SolvePerSquare();
-			solver.SolvePerUnsolvedWhite();
+			solver.board.Print(std::cout);
 		}
 		else if (phase == 1)
 		{
 			solver.SolveUnreachable();
+			solver.board.Print(std::cout);
 		}
 		else
 		{
-			solver.board.Print(std::cout);
 			break;
 		}
-
-		//std::cout << "Phase #" << phasePrev << " - Iteration #" << iterationPrev << std::endl;
-		//currentSolver.board.Print(std::cout);
 
 		hasChangedInPrevLoop = (solver.board != boardIterationStart);
 		if (!hasChangedInPrevLoop)
@@ -282,8 +286,7 @@ int Solver::SolveWithRules(Solver& solver)
 
 bool Solver::Solve(Solver& initialSolver)
 {
-	initialSolver.SolveInitial();
-	initialSolver.board.Print(std::cout);
+	initialSolver.Initialize();
 
 	std::stack<Solver> solverStack;
 	solverStack.push(initialSolver);
@@ -300,19 +303,32 @@ bool Solver::Solve(Solver& initialSolver)
 		Solver solver = std::move(solverStack.top());
 		solverStack.pop();
 
+		std::cout << "Iteration #" << iteration << std::endl;
+		solver.board.Print(std::cout);
+		std::cout << std::endl;
+
 		iteration += SolveWithRules(solver);
 
 		if (Rules::IsSolved(solver.board))
 		{
+			std::cout << std::endl;
 			std::cout << "   --- Starting board ---   " << std::endl;
 			initialSolver.board.Print(std::cout);
 			std::cout << "   ---  Solved board  ---   " << std::endl;
 			solver.board.Print(std::cout);
+			std::cout << std::endl;
 			break;
 		}
 		
-		if (solver.unsolvedWhites.size())
-			SolveDiverge(solver, solverStack);
+		if (!Rules::IsSolvable(solver.board) || !solver.unsolvedWhites.size())
+		{
+			std::cout << "Iteration #" << iteration << std::endl;
+			solver.board.Print(std::cout);
+			std::cout << std::endl;
+			continue;
+		}
+
+		SolveDiverge(solver, solverStack);
 	}
 	return true;
 }

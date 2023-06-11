@@ -10,6 +10,8 @@ namespace Nurikabe
 {
 	namespace Rules
 	{
+		bool FindAnySquareOfState(const Board& board, SquareState state, Point& out);
+
 		bool ContainsBlack2x2(const Board& board);
 		bool IsBlackContiguous(const Board& board);
 
@@ -17,10 +19,7 @@ namespace Nurikabe
 		bool IsTouchingAnother(const Board& board, const Point& pt);
 
 		bool IsSolved(const Board& board);
-
-		std::vector<Point> FindConnectingSquares(const Board& board, const Point& pt);
-
-		std::vector<Point> FindOverlappingConnectingSquares(const Board& board1, const Board& board2, const Point& pt);
+		bool IsSolvable(const Board& board);
 
 		int FindDistance(const Point& start, const Point& end);
 		bool CanReach(const Point& start, const Point& end, int maxDistance);

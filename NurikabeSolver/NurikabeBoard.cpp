@@ -231,6 +231,19 @@ void Board::ForEachSquare(const std::function<bool(const Point&, Square&)>& call
 	}
 }
 
+void Board::ForEachSquare(const std::function<bool(const Point&, const Square&)>& callback) const
+{
+	for (int y = 0; y < GetHeight(); y++)
+	{
+		for (int x = 0; x < GetWidth(); x++)
+		{
+			Point pt = { x, y };
+			if (!callback(pt, Get(pt)))
+				return;
+		}
+	}
+}
+
 void Board::Print(std::ostream& stream) const
 {
 	stream.put('+');

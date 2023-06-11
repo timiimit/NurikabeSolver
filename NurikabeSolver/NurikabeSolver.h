@@ -26,9 +26,11 @@ namespace Nurikabe
 		Solver(const Solver& other);
 
 	private:
-		void SolveInitial();
+		void Initialize();
+
+	private:
 		void SolvePerSquare();
-		void SolvePerUnsolvedWhite();
+		void CheckForSolvedWhites();
 		void SolveUnreachable();
 
 	private:

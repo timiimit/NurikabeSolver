@@ -22,6 +22,25 @@ bool Nurikabe::Region::IsSameState() const
 	return true;
 }
 
+bool Nurikabe::Region::IsSameOrigin() const
+{
+	if (squares.size() == 0)
+		return false;
+	if (squares.size() == 1)
+		return true;
+
+	auto origin = board->Get(squares[0]).GetOrigin();
+	for (int i = 0; i < squares.size(); i++)
+	{
+		if (board->Get(squares[i]).GetOrigin() != origin)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 SquareState Nurikabe::Region::GetState() const
 {
 	if (squares.size() < 1)
@@ -43,6 +62,14 @@ void Nurikabe::Region::SetSize(uint8_t size)
 	for (int i = 0; i < squares.size(); i++)
 	{
 		board->Get(squares[i]).SetSize(size);
+	}
+}
+
+void Nurikabe::Region::SetOrigin(uint8_t origin)
+{
+	for (int i = 0; i < squares.size(); i++)
+	{
+		board->Get(squares[i]).SetOrigin(origin);
 	}
 }
 
