@@ -275,6 +275,20 @@ void Board::ForEachSquare(const std::function<bool(const Point&, const Square&)>
 
 void Board::Print(std::ostream &stream) const
 {
+	stream.put(' ');
+	stream.put(' ');
+	stream.put(' ');
+	for (int x = 0; x < width; x++)
+	{
+		stream << x % 10;
+		if (x < width - 1)
+			stream.put(' ');
+	}
+	stream.put(' ');
+	stream << std::endl;
+
+	stream.put(' ');
+	stream.put(' ');
 	stream.put('+');
 	for (int x = 0; x < width; x++)
 	{
@@ -287,6 +301,11 @@ void Board::Print(std::ostream &stream) const
 
 	for (int y = 0; y < height; y++)
 	{
+		int yMod = y % 100;
+		if (yMod < 10)
+			stream << ' ';
+		stream << yMod;
+
 		stream << '|';
 		for (int x = 0; x < width; x++)
 		{
@@ -294,7 +313,7 @@ void Board::Print(std::ostream &stream) const
 			switch (val.GetState())
 			{
 			case SquareState::Unknown:
-				stream.put('?');
+				stream.put('*');
 				break;
 
 			case SquareState::White:
@@ -322,6 +341,8 @@ void Board::Print(std::ostream &stream) const
 		stream << std::endl;
 	}
 
+	stream.put(' ');
+	stream.put(' ');
 	stream.put('+');
 	for (int x = 0; x < width; x++)
 	{
