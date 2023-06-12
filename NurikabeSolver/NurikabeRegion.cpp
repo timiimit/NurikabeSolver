@@ -1,5 +1,6 @@
 #include "NurikabeRegion.h"
 #include "NurikabeBoard.h"
+#include <assert.h>
 
 using namespace Nurikabe;
 
@@ -326,7 +327,7 @@ Region& Region::ExpandSingleInline(const PointSquareDelegate& predicate, bool in
 	int sqCount = GetSquareCount();
 	for (int i = 0; i < sqCount; i++)
 	{
-		const auto& pt = squares[i];
+		const auto pt = squares[i];
 		AddIfNewAndValid(pt.Left());
 		AddIfNewAndValid(pt.Right());
 		AddIfNewAndValid(pt.Up());
@@ -350,16 +351,26 @@ Region& Region::ExpandAllInline(const PointSquareDelegate& predicate)
 	return *this;
 }
 
-Region &Nurikabe::Region::ValidInflateSingle()
+bool Region::StartNeighbourSpill(Square& out)
 {
 	if (!IsSameState())
-		return *this;
+		return false;
 
-	
-	auto sq = Square(GetState(), GetSameSize());
-	sq.SetOrigin(GetSameOrigin());
+	auto origin = GetSameOrigin();
+	auto size = GetSameSize();
+	if (origin == (uint8_t)~0)
+		size = GetSquareCount();
 
-	return ExpandSingleInline([this, &sq](const Point& pt, const Square& sqInner)
+	auto sq = Square(GetState(), size);
+	sq.SetOrigin(origin);
+
+	out = sq;
+	return true;
+}
+
+Region Region::NeighbourSpill(const Square& sq)
+{
+	auto direct = Neighbours([this, &sq](const Point& pt, const Square& sqInner)
 	{
 		if (sq.GetState() == SquareState::Black)
 		{
@@ -371,19 +382,27 @@ Region &Nurikabe::Region::ValidInflateSingle()
 			{
 				if (sqInner.GetState() == SquareState::White)
 				{
-					if (sqInner.GetOrigin() == (uint8_t)~0 || GetSquareCount() < sqInner.GetSize())
-					{
+					if (sqInner.GetOrigin() == (uint8_t)~0)
 						return true;
-					}
+
+					if (sq.GetSize() + 2 < sqInner.GetSize())
+						return true;
 				}
 				else if (sqInner.GetState() == SquareState::Unknown)
 				{
-					auto count = Region(GetBoard(), pt).Neighbours([this, &sq](const Point&, const Square& sqInner){
-							return
-								sqInner.GetState() == SquareState::White &&
-								sqInner.GetOrigin() != (uint8_t)~0 &&
-								GetSquareCount() < sqInner.GetSize();
-						}).GetSquareCount();
+					auto count = Region(GetBoard(), pt).Neighbours([this, &sq](const Point&, const Square& sqInner)
+					{
+						if (sqInner.GetState() != SquareState::White)
+							return false;
+
+						if (sqInner.GetOrigin() == (uint8_t)~0)
+							return false;
+
+						if (sq.GetSize() + 2 < sqInner.GetSize())
+							return false;
+
+						return true;
+					}).GetSquareCount();
 
 					return count == 0;
 				}
@@ -419,6 +438,64 @@ Region &Nurikabe::Region::ValidInflateSingle()
 
 		return true;
 	});
+
+	if (sq.GetState() == SquareState::White && direct.GetSquareCount() > 1 && !direct.IsContiguous())
+	{
+		Region removeFromDirect = Region((Board*)GetBoard());
+
+		direct.ForEachContiguousRegion([this, &sq, &direct, &removeFromDirect](const Region& r)
+		{
+			auto notR = Region::Subtract(direct, r);
+			auto ignored = Region::Intersection(*this, direct.Neighbours());
+
+			assert(ignored.GetSquareCount() > 0);
+
+			bool isClosed = true;
+			auto state = r.GetState();
+			Region(r).ExpandAllInline([&notR, &ignored, state, &isClosed](const Point& pt, const Square& sqInner)
+			{
+				if (!isClosed)
+					return false;
+
+				if (sqInner.GetState() == SquareState::Black)
+					return false;
+
+				if (sqInner.GetState() == SquareState::Unknown)
+					return true;
+
+				if (ignored.Contains(pt))
+				{
+					return false;
+				}
+
+				if (sqInner.GetState() == SquareState::White)
+				{
+					isClosed = false;
+					return false;
+				}
+
+				if (notR.Contains(pt))
+				{
+					isClosed = false;
+					return false;
+				}
+
+				return true;
+			});
+
+			if (isClosed)
+				removeFromDirect = Region::Union(removeFromDirect, r);
+
+			return true;
+		});
+
+		if (removeFromDirect.GetSquareCount() > 0)
+		{
+			direct = Region::Subtract(direct, removeFromDirect);
+		}
+	}
+
+	return direct;
 }
 
 //Region Region::GetDirectNeighbours(bool includeWalls) const
