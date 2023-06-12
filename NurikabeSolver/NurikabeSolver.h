@@ -64,7 +64,7 @@ namespace Nurikabe
 		static bool SolveDivergeBlack(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, float blackToUnknownRatio);
 		static bool SolveDivergeWhite(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, int maxSizeOfWhiteToDiverge);
 		static void SolveDiverge(Solver& solver, std::vector<Solver>& solverStack);
-		static int SolveWithRules(Solver& solver);
+		static bool SolveWithRules(Solver& solver, int& iteration);
 
 		
 		void ForEachRegion(const RegionDelegate& callback);

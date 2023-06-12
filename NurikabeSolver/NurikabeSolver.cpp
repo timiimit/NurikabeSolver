@@ -694,7 +694,9 @@ bool Solver::SolveWhiteAtClosedBlack()
 						blackNew.SetState(SquareState::Black);
 						Region::Subtract(unknownSkip, blackNew).SetState(SquareState::White);
 						newlyAdded.SetState(SquareState::White);
-						assert(CheckForSolvedWhites());
+
+						if (!CheckForSolvedWhites())
+							return false;
 					}
 				}
 			}
@@ -706,7 +708,8 @@ bool Solver::SolveWhiteAtClosedBlack()
 
 bool Nurikabe::Solver::SolveBlackAtPredictableCorner()
 {
-	ForEachRegion([this](const Region& r)
+	bool ret = true;
+	ForEachRegion([this, &ret](const Region& r)
 	{
 		if (r.GetState() != SquareState::Black)
 			return true;
@@ -764,13 +767,17 @@ bool Nurikabe::Solver::SolveBlackAtPredictableCorner()
 				GetBoard().Print(std::cout);
 				toFillWithWhite.SetState(SquareState::White);
 				GetBoard().Print(std::cout);
-				assert(CheckForSolvedWhites());
+				if (!CheckForSolvedWhites())
+				{
+					ret = false;
+					return false;
+				}
 			}
 		}
 
 		return true;
 	});
-	return true;
+	return ret;
 }
 
 void Solver::SolveBalloonBlack()
@@ -1033,9 +1040,8 @@ void Solver::SolveDiverge(Solver& solver, std::vector<Solver>& solverStack)
 	}
 }
 
-int Solver::SolveWithRules(Solver& solver)
+bool Solver::SolveWithRules(Solver& solver, int& iteration)
 {
-	int iteration = 0;
 	int phase = 0;
 	bool hasChangedInPrevLoop = true;
 
@@ -1049,27 +1055,28 @@ int Solver::SolveWithRules(Solver& solver)
 
 		if (phase == 0)
 		{
-			solver.SolvePerSquare();
-			//solver.board.Print(std::cout);
+			if (!solver.SolvePerSquare())
+				return false;
 		}
 		else if (phase == 1)
 		{
 			solver.SolveUnreachable();
-			//solver.board.Print(std::cout);
 		}
 		else if (phase == 2)
 		{
-			solver.SolveUnfinishedWhiteIsland();
-			//solver.board.Print(std::cout);
+			if (!solver.SolveUnfinishedWhiteIsland())
+				return false;
 		}
 		else if (phase == 3)
 		{
-			solver.SolveWhiteAtClosedBlack();
-			solver.SolveBlackAtPredictableCorner();
-			solver.SolveBalloonUnconnectedWhiteSimple();
-		}
-		else if (phase == 4)
-		{
+			if (!solver.SolveWhiteAtClosedBlack())
+				return false;
+
+			if (!solver.SolveBlackAtPredictableCorner())
+				return false;
+
+			if (!solver.SolveBalloonUnconnectedWhiteSimple())
+				return false;
 		}
 		else
 		{
@@ -1081,16 +1088,11 @@ int Solver::SolveWithRules(Solver& solver)
 			phase++;
 		else
 		{
-			// if (phase == 3)
-			// {
-			// 	boardIterationStart.Print(std::cout);
-			// 	solver.board.Print(std::cout);
-			// }
 			phase = 0;
 		}
 	}
 
-	return iteration;
+	return true;
 }
 
 void Solver::ForEachRegion(const std::function<bool(const Region &)>& callback)
@@ -1148,7 +1150,8 @@ bool Solver::Solve(Solver& initialSolver)
 		Solver solver = solverStack[solverIndex];
 		solverStack.erase(solverStack.begin() + solverIndex);
 
-		iteration += SolveWithRules(solver);
+		if (!SolveWithRules(solver, iteration))
+			continue;
 
 		if (Rules::IsSolved(solver.board))
 		{
