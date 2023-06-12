@@ -48,7 +48,8 @@ namespace Nurikabe
 
         bool SolveBalloonUnconnectedWhiteSimple();
 
-        bool SolveLiteralEdgeCase();
+        bool SolveWhiteAtClosedBlack();
+        bool SolveBlackAtPredictableCorner();
 
         void SolveBalloonBlack();
 
