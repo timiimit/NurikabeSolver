@@ -351,7 +351,7 @@ Region& Region::ExpandAllInline(const PointSquareDelegate& predicate)
 	return *this;
 }
 
-bool Region::StartNeighbourSpill(Square& out)
+bool Region::StartNeighbourSpill(Square& out) const
 {
 	if (!IsSameState())
 		return false;
@@ -368,7 +368,7 @@ bool Region::StartNeighbourSpill(Square& out)
 	return true;
 }
 
-Region Region::NeighbourSpill(const Square& sq)
+Region Region::NeighbourSpill(const Square& sq) const
 {
 	auto direct = Neighbours([this, &sq](const Point& pt, const Square& sqInner)
 	{
@@ -385,12 +385,12 @@ Region Region::NeighbourSpill(const Square& sq)
 					if (sqInner.GetOrigin() == (uint8_t)~0)
 						return true;
 
-					if (sq.GetSize() + 2 < sqInner.GetSize())
+					if (sq.GetSize() + 2 <= sqInner.GetSize())
 						return true;
 				}
 				else if (sqInner.GetState() == SquareState::Unknown)
 				{
-					auto count = Region(GetBoard(), pt).Neighbours([this, &sq](const Point&, const Square& sqInner)
+					auto count = Region((Board*)GetBoard(), pt).Neighbours([this, &sq](const Point&, const Square& sqInner)
 					{
 						if (sqInner.GetState() != SquareState::White)
 							return false;
@@ -398,7 +398,7 @@ Region Region::NeighbourSpill(const Square& sq)
 						if (sqInner.GetOrigin() == (uint8_t)~0)
 							return false;
 
-						if (sq.GetSize() + 2 < sqInner.GetSize())
+						if (sq.GetSize() + 2 <= sqInner.GetSize())
 							return false;
 
 						return true;
@@ -411,14 +411,14 @@ Region Region::NeighbourSpill(const Square& sq)
 			{
 				if (sqInner.GetState() == SquareState::White)
 				{
-					if (sqInner.GetOrigin() == sq.GetOrigin())
+					if (sqInner.GetOrigin() == sq.GetOrigin() || sqInner.GetOrigin() == (uint8_t)~0)
 					{
 						return true;
 					}
 				}
 				else if (sqInner.GetState() == SquareState::Unknown)
 				{
-					auto count = Region(GetBoard(), pt).Neighbours([&sq](const Point&, const Square& sqInner){
+					auto count = Region((Board*)GetBoard(), pt).Neighbours([&sq](const Point&, const Square& sqInner){
 							return
 								sqInner.GetState() == SquareState::White &&
 								sqInner.GetOrigin() != (uint8_t)~0 &&

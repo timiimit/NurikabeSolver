@@ -64,8 +64,8 @@ namespace Nurikabe
 		Region& ExpandSingleInline(const PointSquareDelegate& predicate, bool includeWalls = false);
 		Region& ExpandAllInline(const PointSquareDelegate& predicate);
 
-		bool StartNeighbourSpill(Square& out);
-		Region NeighbourSpill(const Square& sq);
+		bool StartNeighbourSpill(Square& out) const;
+		Region NeighbourSpill(const Square& sq) const;
 		//Region FindPathTo(Point& pt, const PointSquareDelegate& predicate) const;
 
 		Region Neighbours() const
