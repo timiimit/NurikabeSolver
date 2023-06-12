@@ -172,17 +172,57 @@ bool Rules::IsSolvable(const Board& board)
 
 		if (sq.GetState() == SquareState::White && sq.GetOrigin() == (uint8_t)~0)
 		{
-			int reachableOriginTouchingWhites = Region((Board*)&board, pt).ExpandAllInline([](const Point&, const Square& sqInner) {
-				return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() == (uint8_t)~0;
-			})
-			.ExpandAllInline([](const Point&, const Square& sqInner) {
-				return sqInner.GetState() == SquareState::Unknown;
-			})
-			.Neighbours([](const Point&, const Square& sqInner) {
-				return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() != (uint8_t)~0;
-			}).GetSquareCount();
+			Region unconnectedWhite = Region((Board*)&board, pt)
+				.ExpandAllInline([](const Point&, const Square& sqInner) {
+					return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() == (uint8_t)~0;
+				});
 
-			if (reachableOriginTouchingWhites == 0)
+			Region pathToConnectWhite = Region(unconnectedWhite)
+				.ExpandAllInline([](const Point&, const Square& sqInner) {
+					return sqInner.GetState() == SquareState::Unknown;
+				});
+
+			Region reachableOriginTouchingWhites = pathToConnectWhite
+				.Neighbours([](const Point&, const Square& sqInner) {
+					return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() != (uint8_t)~0;
+				});
+
+			if (reachableOriginTouchingWhites.GetSquareCount() == 0)
+			{
+				ret = false;
+				return false;
+			}
+
+			reachableOriginTouchingWhites.ForEach([&unconnectedWhite, &pathToConnectWhite](const Point& pt, const Square& sq) {
+				if (sq.GetSize() <= unconnectedWhite.GetSquareCount())
+				{
+					pathToConnectWhite = Region::Subtract(pathToConnectWhite, Region(pathToConnectWhite.GetBoard(), pt).Neighbours());
+				}
+				return true;
+			});
+
+			reachableOriginTouchingWhites = pathToConnectWhite
+				.Neighbours([](const Point&, const Square& sqInner) {
+					return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() != (uint8_t)~0;
+				});
+
+			if (reachableOriginTouchingWhites.GetSquareCount() == 0)
+			{
+				ret = false;
+				return false;
+			}
+
+			int maxSize = 0;
+			reachableOriginTouchingWhites.ForEach([&maxSize](const Point& pt, const Square& sq)
+			{
+				int size = sq.GetSize();
+				if (size > maxSize)
+					maxSize = size;
+				
+				return true;
+			});
+
+			if (unconnectedWhite.GetSquareCount() > maxSize)
 			{
 				ret = false;
 				return false;

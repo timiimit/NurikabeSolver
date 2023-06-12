@@ -22,7 +22,11 @@ namespace Nurikabe
 	public:
 		Board();
 		Board(const Board& other);
+		Board(Board&& other);
 		~Board();
+		
+		Board& operator=(const Board& other);
+		Board& operator=(Board&& other);
 
 		bool operator==(const Board& other) const;
 	public:

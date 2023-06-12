@@ -6,6 +6,9 @@
 namespace Nurikabe
 {
 	class Board;
+	class Region;
+
+	typedef std::function<bool(const Region&)> RegionDelegate;
 
 	class Region
 	{
@@ -50,6 +53,7 @@ namespace Nurikabe
 		Region(Board* board, const Point& square);
 
 		void ForEach(const PointSquareDelegate& callback);
+		void ForEachContiguousRegion(const RegionDelegate& callback);
 
 		static Region Union(const Region& a, const Region& b);
 		static Region Intersection(const Region& a, const Region& b);
@@ -59,6 +63,9 @@ namespace Nurikabe
 		Region Neighbours(const PointSquareDelegate& predicate, bool includeWalls = false) const;
 		Region& ExpandSingleInline(const PointSquareDelegate& predicate, bool includeWalls = false);
 		Region& ExpandAllInline(const PointSquareDelegate& predicate);
+
+
+		Region& ValidInflateSingle();
 		//Region FindPathTo(Point& pt, const PointSquareDelegate& predicate) const;
 
 		Region Neighbours() const

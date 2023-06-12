@@ -17,9 +17,12 @@ namespace Nurikabe
 
 		std::vector<Point> initialWhites;
 		std::vector<int> unsolvedWhites;
+		std::vector<Point> startOfUnconnectedWhite;
 
 	public:
 		Square GetInitialWhite(int initialWhiteIndex);
+		const Board& GetBoard() const { return board; }
+		Board& GetBoard() { return board; }
 
 	public:
 		Solver(const Board& initialBoard);
@@ -30,24 +33,40 @@ namespace Nurikabe
 
 	private:
 		/// @brief Solves with narrow-sighted, simple per square rules
-		void SolvePerSquare();
+		bool SolvePerSquare();
 
 		/// @brief Solves squares that cannot be reached by any white
 		void SolveUnreachable();
 
 		/// @brief Solves standalone islands by finding which squares are forced to white
-		void SolveUnfinishedWhiteIsland();
+		bool SolveUnfinishedWhiteIsland();
 
-		/// @brief Solves black+unknown region when there is only 1 way out from unknown region
-		void SolveBlackToUnblock();
+		/// @brief Solves whites which expand and then guaranteed contract into a single line
+		bool SolveBalloonWhite();
+
+        bool SolveBalloonUnconnectedWhite();
+
+        bool SolveBalloonUnconnectedWhiteSimple();
+
+        bool SolveLiteralEdgeCase();
+
+        void SolveBalloonBlack();
+
+		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
+		bool SolveGuessBlackToUnblock(int minSize);
 
 	private:
 		/// @brief Removes any solved white that is still in @p unsolvedWhites .
-		void CheckForSolvedWhites();
+		bool CheckForSolvedWhites();
 
 	private:
-		static void SolveDiverge(Solver& solver, std::stack<Solver>& solverStack);
+		static bool SolveDivergeBlack(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, float blackToUnknownRatio);
+		static bool SolveDivergeWhite(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, int maxSizeOfWhiteToDiverge);
+		static void SolveDiverge(Solver& solver, std::vector<Solver>& solverStack);
 		static int SolveWithRules(Solver& solver);
+
+		
+		void ForEachRegion(const RegionDelegate& callback);
 
 	public:
 		static bool Solve(Solver& solver);

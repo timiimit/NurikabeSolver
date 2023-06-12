@@ -202,14 +202,38 @@ void Region::ForEach(const PointSquareDelegate& callback)
 	}
 }
 
+void Region::ForEachContiguousRegion(const RegionDelegate& callback)
+{
+	auto& board = this->board;
+
+	Region handled(board);
+
+	ForEach([this, &handled, &callback](const Point& pt, const Square&)
+	{
+		if (handled.Contains(pt))
+			return true;
+
+		Region contiguous = Region(GetBoard(), pt).ExpandAllInline(
+			[this](const Point& ptInner, const Square&) { return Contains(ptInner); }
+		);
+
+		handled = Region::Union(handled, contiguous);
+
+		return callback(contiguous);
+	});
+}
+
 Nurikabe::Region Region::Union(const Region& a, const Region& b)
 {
 	if (a.GetBoard() != b.GetBoard())
 		return Region(nullptr);
 
 	Region ret(a);
-	ret.squares.insert(ret.squares.end(), b.squares.begin(), b.squares.end());
-	// NOTE: we assume regions dont overlap
+	for (int i = 0; i < b.GetSquareCount(); i++)
+	{
+		if (!ret.Contains(b.squares[i]))
+			ret.squares.push_back(b.squares[i]);
+	}
 	return ret;
 }
 
@@ -324,6 +348,77 @@ Region& Region::ExpandAllInline(const PointSquareDelegate& predicate)
 		sqCount = sqCountNew;
 	}
 	return *this;
+}
+
+Region &Nurikabe::Region::ValidInflateSingle()
+{
+	if (!IsSameState())
+		return *this;
+
+	
+	auto sq = Square(GetState(), GetSameSize());
+	sq.SetOrigin(GetSameOrigin());
+
+	return ExpandSingleInline([this, &sq](const Point& pt, const Square& sqInner)
+	{
+		if (sq.GetState() == SquareState::Black)
+		{
+			return sqInner.GetState() == SquareState::Black || sqInner.GetState() == SquareState::Unknown;
+		}
+		else if (sq.GetState() == SquareState::White)
+		{
+			if (sq.GetOrigin() == (uint8_t)~0)
+			{
+				if (sqInner.GetState() == SquareState::White)
+				{
+					if (sqInner.GetOrigin() == (uint8_t)~0 || GetSquareCount() < sqInner.GetSize())
+					{
+						return true;
+					}
+				}
+				else if (sqInner.GetState() == SquareState::Unknown)
+				{
+					auto count = Region(GetBoard(), pt).Neighbours([this, &sq](const Point&, const Square& sqInner){
+							return
+								sqInner.GetState() == SquareState::White &&
+								sqInner.GetOrigin() != (uint8_t)~0 &&
+								GetSquareCount() < sqInner.GetSize();
+						}).GetSquareCount();
+
+					return count == 0;
+				}
+			}
+			else
+			{
+				if (sqInner.GetState() == SquareState::White)
+				{
+					if (sqInner.GetOrigin() == sq.GetOrigin())
+					{
+						return true;
+					}
+				}
+				else if (sqInner.GetState() == SquareState::Unknown)
+				{
+					auto count = Region(GetBoard(), pt).Neighbours([&sq](const Point&, const Square& sqInner){
+							return
+								sqInner.GetState() == SquareState::White &&
+								sqInner.GetOrigin() != (uint8_t)~0 &&
+								sqInner.GetOrigin() != sq.GetOrigin();
+						}).GetSquareCount();
+					
+					return count == 0;
+				}
+			}
+
+			return false;
+		}
+		else
+		{
+			return sqInner.GetState() == sq.GetState();
+		}
+
+		return true;
+	});
 }
 
 //Region Region::GetDirectNeighbours(bool includeWalls) const

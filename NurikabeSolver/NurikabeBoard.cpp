@@ -4,6 +4,7 @@
 #include "NurikabeBoard.h"
 #include <fstream>
 #include <cstring>
+#include <utility>
 
 using namespace Nurikabe;
 
@@ -22,6 +23,14 @@ Board::Board(const Board& other)
 	std::memcpy(squares, other.squares, sizeof(Square) * width * height);
 }
 
+Board::Board(Board&& other)
+	: squares(std::exchange(other.squares, nullptr))
+	, width(other.width)
+	, height(other.height)
+{
+	
+}
+
 Board::~Board()
 {
 	if (squares)
@@ -29,6 +38,29 @@ Board::~Board()
 		delete[] squares;
 		squares = nullptr;
 	}
+}
+
+Board& Board::operator=(const Board& other)
+{
+	if (squares)
+		delete[] squares;
+
+	squares = new Square[other.GetWidth() * other.GetHeight()];
+	std::memcpy(squares, other.squares, sizeof(Square) * width * height);
+
+	width = other.width;
+	height = other.height;
+
+	return *this;
+}
+
+Board& Board::operator=(Board&& other)
+{
+	squares = std::exchange(other.squares, squares);
+	width = std::exchange(other.width, width);
+	height = std::exchange(other.height, height);
+
+	return *this;
 }
 
 bool Board::operator==(const Board& other) const
@@ -241,7 +273,7 @@ void Board::ForEachSquare(const std::function<bool(const Point&, const Square&)>
 	}
 }
 
-void Board::Print(std::ostream& stream) const
+void Board::Print(std::ostream &stream) const
 {
 	stream.put('+');
 	for (int x = 0; x < width; x++)
