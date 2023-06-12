@@ -62,6 +62,8 @@ namespace Nurikabe
 
 		bool IsSolvable();
 
+		bool IsSolved();
+
 		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
 		bool SolveGuessBlackToUnblock(int minSize);
 

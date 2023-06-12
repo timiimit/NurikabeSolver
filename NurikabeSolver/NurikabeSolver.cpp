@@ -939,11 +939,71 @@ bool Solver::IsSolvable()
 		if (!r.StartNeighbourSpill(sq))
 			return true;
 
-		
+
 		return true;
 	});
 
 	return ret;
+}
+
+bool Solver::IsSolved()
+{
+	if (Rules::ContainsBlack2x2(board))
+		return false;
+
+	struct Results
+	{
+		bool existsBlackRegion = false;
+		bool existsMoreThanOneBlackRegion = false;
+		bool existsUnconnectedWhite = false;
+		bool existsMissizedFinishedWhite = false;
+		bool existsUnknownRegion = false;
+		//bool existsWhiteTouchingAnother = false;
+	};
+
+	Results results;
+	ForEachRegion([&results](const Region& r)
+	{
+		if (r.GetState() == SquareState::Black)
+		{
+			if (results.existsBlackRegion)
+			{
+				results.existsMoreThanOneBlackRegion = true;
+				return false;
+			}
+			results.existsBlackRegion = true;
+		}
+		else if (r.GetState() == SquareState::White)
+		{
+			if (r.GetSameOrigin() == (uint8_t)~0)
+			{
+				results.existsUnconnectedWhite = true;
+				return false;
+			}
+			if (r.GetSquareCount() != r.GetSameSize())
+			{
+				results.existsMissizedFinishedWhite = true;
+				return false;
+			}
+		}
+		else if (r.GetState() == SquareState::Unknown)
+		{
+			results.existsUnknownRegion = true;
+			return false;
+		}
+		return true;
+	});
+
+	if (!results.existsBlackRegion ||
+		results.existsMoreThanOneBlackRegion ||
+		results.existsUnconnectedWhite ||
+		results.existsUnknownRegion ||
+		results.existsMissizedFinishedWhite)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 bool Solver::SolveDivergeBlack(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, float blackToUnknownRatio)
@@ -1243,7 +1303,7 @@ bool Solver::Solve(Solver& initialSolver)
 		if (!SolveWithRules(solver, iteration))
 			continue;
 
-		if (Rules::IsSolved(solver.board))
+		if (solver.IsSolved())
 		{
 			std::cout << std::endl << std::endl << std::endl;
 			std::cout << "   --- Starting board ---   " << std::endl;
