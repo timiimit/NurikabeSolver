@@ -43,6 +43,43 @@ void Solver::Initialize()
 		});
 }
 
+bool Solver::SolveInflateTrivial(SquareState state)
+{
+	bool ret = true;
+	ForEachRegion([this, &ret, state](const Region& r)
+	{
+		if (r.GetState() == state)
+			return true;
+			
+		auto rSize = r.GetSquareCount();
+		auto rExpectedSize = r.GetSameSize();
+		auto rOrigin = r.GetSameOrigin();
+
+		Region rContinuations = r.Neighbours([](const Point&, Square& squareInner) {
+				return squareInner.GetState() == SquareState::Unknown;
+			});
+
+		if (rContinuations.GetSquareCount() == 1)
+		{
+			// If there's only one way to go, then go there
+
+			rContinuations.SetState(state);
+			if (state == SquareState::White)
+			{
+				if (!CheckForSolvedWhites())
+				{
+					ret = false;
+					return false;
+				}
+			}
+			return true;
+		}
+
+		return ret;
+	});
+	return ret;
+}
+
 bool Solver::SolvePerSquare()
 {
 	bool ret = true;
@@ -578,12 +615,103 @@ bool Solver::SolveBalloonUnconnectedWhite()
 	return true;
 }
 
-bool Solver::SolveBalloonUnconnectedWhiteSimple()
+bool Solver::SolveBalloonWhiteSimple()
 {
 	for (int i = 0; i < startOfUnconnectedWhite.size(); i++)
 	{
-		auto white = Region(&board, startOfUnconnectedWhite[i]);
+		auto res = SolveBalloonWhiteSimpleSingle(startOfUnconnectedWhite[i]);
+		if (res == 0)
+			return false;
+		if (res != 1)
+			return true;
+	}
+	for (int i = 0; i < unsolvedWhites.size(); i++)
+	{
+		auto res = SolveBalloonWhiteSimpleSingle(initialWhites[unsolvedWhites[i]]);
+		if (res == 0)
+			return false;
+		if (res != 1)
+			return true;
+	}
+	return true;
+}
+
+int Solver::SolveBalloonWhiteSimpleSingle(Point pt)
+{
+	auto white = Region(&board, pt);
+	auto actualSize = white.GetSquareCount();
+	auto expectedSize = white.GetSameSize();
+
+	white.ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; });
+
+	Square sq;
+	if (!white.StartNeighbourSpill(sq))
+		return 1;
+
+	GetBoard().Print(std::cout);
+
+	auto spill = white.NeighbourSpill(sq);
+	auto inflated = Region::Union(white, spill);
+	auto toAdd = Region(&board);
+
+	if (spill.GetSquareCount() == 1)
+	{
+		do
+		{
+			toAdd = Region::Union(toAdd, spill);
+			inflated = Region::Union(inflated, spill);
+
+			spill = inflated.NeighbourSpill(sq);
+			sq.SetSize(sq.GetSize() + 1);
+		}
+		while (spill.GetSquareCount() == 1);
+
+		toAdd.SetState(SquareState::White);
+
+		GetBoard().Print(std::cout);
+		if (!CheckForSolvedWhites())
+			return 0;
+
+		return 2;
+	}
+
+	if (spill.GetSquareCount() > 1)
+	{
+		spill = inflated.NeighbourSpill(sq);
+		if (spill.GetSquareCount() == 1)
+		{
+			if (expectedSize == 0)
+			{
+				toAdd = Region::Union(spill, Region::Intersection(inflated, spill.NeighbourSpill(sq)));
+				toAdd.SetState(SquareState::White);
+			}
+			else
+			{
+				toAdd = Region::Intersection(inflated, spill.NeighbourSpill(sq));
+				if (actualSize + toAdd.GetSquareCount() > expectedSize)
+					return 1;
+
+				toAdd.SetState(SquareState::White);
+			}
+
+			GetBoard().Print(std::cout);
+			if (!CheckForSolvedWhites())
+				return 0;
+
+			return 2;
+		}
+	}
+	
+	return 1;
+}
+
+bool Solver::SolveBalloonWhiteFillSpaceCompletely()
+{
+	for (int i = 0; i < unsolvedWhites.size(); i++)
+	{
+		auto white = Region(&board, initialWhites[unsolvedWhites[i]]);
 		auto actualSize = white.GetSquareCount();
+		auto expectedSize = white.GetSameSize();
 
 		white.ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; });
 
@@ -595,46 +723,26 @@ bool Solver::SolveBalloonUnconnectedWhiteSimple()
 
 		auto spill = white.NeighbourSpill(sq);
 		auto inflated = Region::Union(white, spill);
-		auto toAdd = Region(&board);
 
-		if (spill.GetSquareCount() == 1)
+		do
 		{
-			do
-			{
-				toAdd = Region::Union(toAdd, spill);
-				inflated = Region::Union(inflated, spill);
+			inflated = Region::Union(inflated, spill);
 
-				spill = inflated.NeighbourSpill(sq);
-				sq.SetSize(sq.GetSize() + 1);
-			}
-			while (spill.GetSquareCount() == 1);
+			sq.SetSize(sq.GetSize() + spill.GetSquareCount());
+			spill = inflated.NeighbourSpill(sq);
+		}
+		while (spill.GetSquareCount() > 0);
 
-			toAdd.SetState(SquareState::White);
+		if (expectedSize == inflated.GetSquareCount())
+		{
+			inflated.SetState(SquareState::White);
 
 			GetBoard().Print(std::cout);
 			if (!CheckForSolvedWhites())
 				return false;
 
-			continue;
+			return true;
 		}
-
-		if (spill.GetSquareCount() > 1)
-		{
-			spill = inflated.NeighbourSpill(sq);
-			if (spill.GetSquareCount() == 1)
-			{
-				auto toAdd = Region::Union(spill, Region::Intersection(inflated, spill.NeighbourSpill(sq)));
-				toAdd.SetState(SquareState::White);
-
-				GetBoard().Print(std::cout);
-				if (!CheckForSolvedWhites())
-					return false;
-			}
-
-			continue;
-		}
-		
-		break;
 	}
 
 	return true;
@@ -1095,7 +1203,12 @@ bool Solver::SolveWithRules(Solver& solver, int& iteration)
 			{
 				int a = 0;
 			}
-			if (!solver.SolveBalloonUnconnectedWhiteSimple())
+			if (!solver.SolveBalloonWhiteSimple())
+				return false;
+		}
+		else if (phase == 4)
+		{
+			if (!solver.SolveBalloonWhiteFillSpaceCompletely())
 				return false;
 		}
 		else

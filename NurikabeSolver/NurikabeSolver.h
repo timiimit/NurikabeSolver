@@ -32,7 +32,8 @@ namespace Nurikabe
 		void Initialize();
 
 	private:
-		/// @brief Solves with narrow-sighted, simple per square rules
+		bool SolveInflateTrivial(SquareState state);
+
 		bool SolvePerSquare();
 
 		/// @brief Solves squares that cannot be reached by any white
@@ -46,7 +47,11 @@ namespace Nurikabe
 
         bool SolveBalloonUnconnectedWhite();
 
-        bool SolveBalloonUnconnectedWhiteSimple();
+        bool SolveBalloonWhiteSimple();
+
+        int SolveBalloonWhiteSimpleSingle(Point pt);
+
+		bool SolveBalloonWhiteFillSpaceCompletely();
 
         bool SolveWhiteAtClosedBlack();
         bool SolveBlackAtPredictableCorner();

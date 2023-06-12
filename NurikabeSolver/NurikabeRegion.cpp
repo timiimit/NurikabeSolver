@@ -439,7 +439,7 @@ Region Region::NeighbourSpill(const Square& sq)
 		return true;
 	});
 
-	if (sq.GetState() == SquareState::White && direct.GetSquareCount() > 1 && !direct.IsContiguous())
+	if (sq.GetOrigin() == (uint8_t)~0 && sq.GetState() == SquareState::White && direct.GetSquareCount() > 1 && !direct.IsContiguous())
 	{
 		Region removeFromDirect = Region((Board*)GetBoard());
 
