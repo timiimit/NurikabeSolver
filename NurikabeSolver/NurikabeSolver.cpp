@@ -544,22 +544,17 @@ int Solver::SolveBalloonWhiteSimpleSingle(Point pt)
 		spill = inflated.NeighbourSpill(sq);
 		if (spill.GetSquareCount() == 1)
 		{
-			if (expectedSize == 0)
+			if (expectedSize > 0)
 			{
-				toAdd = Region::Union(spill, Region::Intersection(inflated, spill.NeighbourSpill(sq)));
-				toAdd.SetState(SquareState::White);
-			}
-			else
-			{
-				return 2;
-
-				// NOTE: I think this condition is wrong
-				toAdd = Region::Intersection(inflated, spill.NeighbourSpill(sq));
-				if (actualSize + toAdd.GetSquareCount() > expectedSize)
+				if (expectedSize < actualSize + inflated.GetSquareCount() + spill.GetSquareCount())
 					return 1;
-
-				toAdd.SetState(SquareState::White);
 			}
+
+			auto pathToSpill = Region::Intersection(inflated, spill.NeighbourSpill(sq));
+			if (pathToSpill.GetSquareCount() == 1)
+				pathToSpill.SetState(SquareState::White);
+
+			spill.SetState(SquareState::White);
 
 			if (!CheckForSolvedWhites())
 				return 0;
