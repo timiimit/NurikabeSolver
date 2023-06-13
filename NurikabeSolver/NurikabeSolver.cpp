@@ -10,10 +10,10 @@ Square Solver::GetInitialWhite(int initialWhiteIndex)
 	return board.Get(initialWhites[initialWhiteIndex]);
 }
 
-Solver::Solver(const Board& initialBoard)
+Solver::Solver(const Board& initialBoard, int* iteration)
 	: board(initialBoard)
+	, iteration(iteration)
 {
-	iteration = 0;
 }
 
 Solver::Solver(const Solver& other)
@@ -21,7 +21,7 @@ Solver::Solver(const Solver& other)
 	, initialWhites(other.initialWhites)
 	, unsolvedWhites(other.unsolvedWhites)
 	, startOfUnconnectedWhite(other.startOfUnconnectedWhite)
-	, iteration(0)
+	, iteration(other.iteration)
 {
 
 }
@@ -804,8 +804,6 @@ bool Solver::SolveHighLevelRecursive(bool allowRecursion)
 			if (!solver.SolveWithRules(false))
 				return true;
 
-			iteration += solver.GetIteration();
-
 			auto eval = solver.Evaluate();
 
 			if (eval.IsSolvable())
@@ -1240,13 +1238,13 @@ bool Solver::SolveWithRules(bool allowRecursion)
 	bool hasChangedInPrevLoop = true;
 
 	const int checkFrequency = 20;
-	int iterationNextCheck = iteration + checkFrequency;
+	int iterationNextCheck = *iteration + checkFrequency;
 
 	while (true)
 	{
 		Board boardIterationStart = board;
 
-		if (iteration == 164)
+		if (*iteration == 164)
 		{
 			int a = 0;
 		}
@@ -1269,14 +1267,14 @@ bool Solver::SolveWithRules(bool allowRecursion)
 			//board.Print(std::cout);
 
 			phase = 0;
-			iteration++;
+			(*iteration)++;
 
-			if (iteration >= iterationNextCheck)
+			if (*iteration >= iterationNextCheck)
 			{
-				std::cout << "Iteration #" << iteration << std::endl;
+				std::cout << "Iteration #" << *iteration << std::endl;
 				board.Print(std::cout);
 
-				iterationNextCheck = iteration + checkFrequency;
+				iterationNextCheck = *iteration + checkFrequency;
 				auto eval = Evaluate();
 				if (!eval.IsSolvable())
 					break;

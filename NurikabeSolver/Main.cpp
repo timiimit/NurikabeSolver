@@ -5,14 +5,15 @@
 int main()
 {
 	Nurikabe::Board board;
-	if (!board.Load("10x18-hard.txt"))
+	if (!board.Load("10x18-3.txt"))
 	{
 		std::cout << "failed to read file" << std::endl;
 		return 1;
 	}
 	board.Print(std::cout);
 
-	Nurikabe::Solver solver(board);
+	int iteration = 0;
+	Nurikabe::Solver solver(board, &iteration);
 
 	auto timeStart = std::chrono::system_clock::now();
 
@@ -37,7 +38,7 @@ int main()
 
 	std::cout
 		<< "Runtime: " << timeElapsed << "ms" << std::endl
-		<< "Iterations: " << solver.GetIteration() << std::endl;
+		<< "Iterations: " << iteration << std::endl;
 
 	return 0;
 }

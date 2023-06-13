@@ -20,7 +20,7 @@ namespace Nurikabe
 		std::vector<Point> startOfUnconnectedWhite;
 
 		std::vector<Solver> solverStack;
-		int iteration;
+		int* iteration;
 
 	public:
 		Square GetInitialWhite(int initialWhiteIndex);
@@ -28,10 +28,10 @@ namespace Nurikabe
 		const Board& GetBoard() const { return board; }
 		Board& GetBoard() { return board; }
 
-		int GetIteration() const { return iteration; }
+		int GetIteration() const { return *iteration; }
 
 	public:
-		Solver(const Board& initialBoard);
+		Solver(const Board& initialBoard, int* iteration);
 		Solver(const Solver& other);
 
 	private:
