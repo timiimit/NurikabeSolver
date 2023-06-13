@@ -384,13 +384,18 @@ Region Region::NeighbourSpill(const Square& sq) const
 				{
 					if (sqInner.GetOrigin() == (uint8_t)~0)
 						return true;
+						
+					auto whiteActualSize =
+						Region((Board*)GetBoard(), pt)
+						.ExpandAllInline([](const Point&, const Square& sq) { return sq.GetState() == SquareState::White; })
+						.GetSquareCount();
 
-					if (sq.GetSize() + 2 <= sqInner.GetSize())
+					if (sq.GetSize() + 1 + whiteActualSize <= sqInner.GetSize())
 						return true;
 				}
 				else if (sqInner.GetState() == SquareState::Unknown)
 				{
-					auto count = Region((Board*)GetBoard(), pt).Neighbours([this, &sq](const Point&, const Square& sqInner)
+					auto count = Region((Board*)GetBoard(), pt).Neighbours([this, &sq](const Point& ptInner, const Square& sqInner)
 					{
 						if (sqInner.GetState() != SquareState::White)
 							return false;
@@ -398,7 +403,12 @@ Region Region::NeighbourSpill(const Square& sq) const
 						if (sqInner.GetOrigin() == (uint8_t)~0)
 							return false;
 
-						if (sq.GetSize() + 2 <= sqInner.GetSize())
+						auto whiteActualSize =
+							Region((Board*)GetBoard(), ptInner)
+							.ExpandAllInline([](const Point&, const Square& sq) { return sq.GetState() == SquareState::White; })
+							.GetSquareCount();
+
+						if (sq.GetSize() + 1 + whiteActualSize <= sqInner.GetSize())
 							return false;
 
 						return true;
@@ -418,12 +428,33 @@ Region Region::NeighbourSpill(const Square& sq) const
 				}
 				else if (sqInner.GetState() == SquareState::Unknown)
 				{
-					auto count = Region((Board*)GetBoard(), pt).Neighbours([&sq](const Point&, const Square& sqInner){
-							return
-								sqInner.GetState() == SquareState::White &&
-								sqInner.GetOrigin() != (uint8_t)~0 &&
-								sqInner.GetOrigin() != sq.GetOrigin();
-						}).GetSquareCount();
+					if (pt == Point{2,7} || pt == Point{3,8})
+					{
+						int a = 0;
+					}
+					auto count = Region((Board*)GetBoard(), pt).Neighbours([this, &sq](const Point& ptInner, const Square& sqInner)
+					{
+						if (sqInner.GetState() != SquareState::White)
+							return false;
+						
+						if (sqInner.GetOrigin() != (uint8_t)~0)
+						{
+							if (sqInner.GetOrigin() == sq.GetOrigin())
+								return false;
+						}
+						else
+						{
+							auto whiteActualSize =
+								Region((Board*)GetBoard(), ptInner)
+								.ExpandAllInline([](const Point&, const Square& sq) { return sq.GetState() == SquareState::White; })
+								.GetSquareCount();
+
+							if (GetSquareCount() + 1 + whiteActualSize <= sq.GetSize())
+								return false;
+						}
+						
+						return true;
+					}).GetSquareCount();
 					
 					return count == 0;
 				}
