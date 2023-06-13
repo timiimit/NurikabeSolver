@@ -1182,7 +1182,7 @@ bool Solver::Solve()
 		if (eval.IsSolved())
 		{
 			board = solver.board;
-			solverStack.clear(0;)
+			solverStack.clear();
 			break;
 		}
 		
