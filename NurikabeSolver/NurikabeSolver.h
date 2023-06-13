@@ -21,6 +21,8 @@ namespace Nurikabe
 
 		std::vector<Solver> solverStack;
 		int* iteration;
+		int depth;
+		int id;
 
 	public:
 		Square GetInitialWhite(int initialWhiteIndex);
@@ -33,6 +35,8 @@ namespace Nurikabe
 	public:
 		Solver(const Board& initialBoard, int* iteration);
 		Solver(const Solver& other);
+
+		Solver& operator=(const Solver& other);
 
 	private:
 		void Initialize();
@@ -62,7 +66,9 @@ namespace Nurikabe
         bool SolveBlackAroundWhite();
 		bool SolveHighLevelRecursive(bool allowRecursion);
 
-        bool SolveWhiteAtPredictableCorner();
+		bool SolveUnconnectedWhiteHasOnlyOnePossibleOrigin();
+
+        bool SolveWhiteAtPredictableCorner(bool allowRecursion);
 
         void SolveBalloonBlack();
 
@@ -81,12 +87,13 @@ namespace Nurikabe
 			bool existsUnknownRegion = false;
 
 			bool existsUnconnectedWhite = false;
+			bool existsUnconnectedClosedWhite = false;
 			bool existsTooLargeWhite = false;
 			//bool existsWhiteTouchingAnother = false;
 
 			bool IsSolved() const
 			{
-				bool common = !existsUnknownRegion && !existsUnconnectedWhite && !existsTooLargeWhite;
+				bool common = !existsUnknownRegion && !existsUnconnectedWhite && !existsTooLargeWhite && !existsUnconnectedClosedWhite;
 				
 				if (!existsBlackRegion)
 					return common;
@@ -101,7 +108,7 @@ namespace Nurikabe
 
 				return
 					!existsClosedBlack && !existsBlack2x2 &&
-					!existsTooLargeWhite;
+					!existsTooLargeWhite && !existsUnconnectedClosedWhite;
 			}
 		};
 
