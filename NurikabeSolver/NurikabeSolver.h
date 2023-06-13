@@ -19,10 +19,16 @@ namespace Nurikabe
 		std::vector<int> unsolvedWhites;
 		std::vector<Point> startOfUnconnectedWhite;
 
+		std::vector<Solver> solverStack;
+		int iteration;
+
 	public:
 		Square GetInitialWhite(int initialWhiteIndex);
+
 		const Board& GetBoard() const { return board; }
 		Board& GetBoard() { return board; }
+
+		int GetIteration() const { return iteration; }
 
 	public:
 		Solver(const Board& initialBoard);
@@ -32,7 +38,8 @@ namespace Nurikabe
 		void Initialize();
 
 	private:
-		/// @brief Solves with narrow-sighted, simple per square rules
+		bool SolveInflateTrivial(SquareState state);
+
 		bool SolvePerSquare();
 
 		/// @brief Solves squares that cannot be reached by any white
@@ -46,12 +53,59 @@ namespace Nurikabe
 
         bool SolveBalloonUnconnectedWhite();
 
-        bool SolveBalloonUnconnectedWhiteSimple();
+        bool SolveBalloonWhiteSimple();
 
-        bool SolveWhiteAtClosedBlack();
-        bool SolveBlackAtPredictableCorner();
+        int SolveBalloonWhiteSimpleSingle(Point pt);
+
+		bool SolveBalloonWhiteFillSpaceCompletely();
+
+        bool SolveBlackAroundWhite();
+		bool SolveHighLevelRecursive(bool allowRecursion);
+
+        bool SolveWhiteAtPredictableCorner();
 
         void SolveBalloonBlack();
+
+		void SolveBlackInCorneredWhite2By3();
+
+		void SolveDisjointedBlack();
+
+	public:
+		struct Evaluation
+		{
+			bool existsBlackRegion = false;
+			bool existsMoreThanOneBlackRegion = false;
+			bool existsClosedBlack = false;
+			bool existsBlack2x2 = false;
+
+			bool existsUnknownRegion = false;
+
+			bool existsUnconnectedWhite = false;
+			bool existsTooLargeWhite = false;
+			//bool existsWhiteTouchingAnother = false;
+
+			bool IsSolved() const
+			{
+				bool common = !existsUnknownRegion && !existsUnconnectedWhite && !existsTooLargeWhite;
+				
+				if (!existsBlackRegion)
+					return common;
+
+				return !existsMoreThanOneBlackRegion && existsClosedBlack && !existsBlack2x2 && common;
+			}
+
+			bool IsSolvable() const
+			{
+				if (IsSolved())
+					return true;
+
+				return
+					!existsClosedBlack && !existsBlack2x2 &&
+					!existsTooLargeWhite;
+			}
+		};
+
+		Evaluation Evaluate();
 
 		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
 		bool SolveGuessBlackToUnblock(int minSize);
@@ -64,12 +118,13 @@ namespace Nurikabe
 		static bool SolveDivergeBlack(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, float blackToUnknownRatio);
 		static bool SolveDivergeWhite(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, int maxSizeOfWhiteToDiverge);
 		static void SolveDiverge(Solver& solver, std::vector<Solver>& solverStack);
-		static bool SolveWithRules(Solver& solver, int& iteration);
 
 		
 		void ForEachRegion(const RegionDelegate& callback);
 
 	public:
-		static bool Solve(Solver& solver);
+		int SolvePhase(int phase, bool allowRecursion);
+		bool SolveWithRules(bool allowRecursion);
+		bool Solve();
 	};
 }

@@ -8,7 +8,7 @@ namespace Nurikabe
 	class Board;
 	class Region;
 
-	typedef std::function<bool(const Region&)> RegionDelegate;
+	typedef std::function<bool(Region&)> RegionDelegate;
 
 	class Region
 	{
@@ -64,13 +64,17 @@ namespace Nurikabe
 		Region& ExpandSingleInline(const PointSquareDelegate& predicate, bool includeWalls = false);
 		Region& ExpandAllInline(const PointSquareDelegate& predicate);
 
-		bool StartNeighbourSpill(Square& out);
-		Region NeighbourSpill(const Square& sq);
+		bool StartNeighbourSpill(Square& out) const;
+		Region NeighbourSpill(const Square& sq) const;
 		//Region FindPathTo(Point& pt, const PointSquareDelegate& predicate) const;
 
 		Region Neighbours() const
 		{
 			return Neighbours([](const Point&, Square&) { return true; });
+		}
+		Region Neighbours(SquareState state) const
+		{
+			return Neighbours([state](const Point&, Square& sq) { return sq.GetState() == state; });
 		}
 		Region& ExpandSingleInline()
 		{
