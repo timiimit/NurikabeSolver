@@ -1,7 +1,6 @@
 #include "NurikabeSolver.h"
 #include <iostream>
 #include <assert.h>
-#include <chrono>
 
 using namespace Nurikabe;
 
@@ -14,7 +13,7 @@ Square Solver::GetInitialWhite(int initialWhiteIndex)
 Solver::Solver(const Board& initialBoard)
 	: board(initialBoard)
 {
-
+	iteration = 0;
 }
 
 Solver::Solver(const Solver& other)
@@ -22,6 +21,7 @@ Solver::Solver(const Solver& other)
 	, initialWhites(other.initialWhites)
 	, unsolvedWhites(other.unsolvedWhites)
 	, startOfUnconnectedWhite(other.startOfUnconnectedWhite)
+	, iteration(0)
 {
 
 }
@@ -867,178 +867,52 @@ void Solver::SolveDisjointedBlack()
 	});
 }
 
-bool Solver::IsSolvable()
+Solver::Evaluation Solver::Evaluate()
 {
-	if (Rules::ContainsBlack2x2(board))
-		return false;
+	Evaluation eval;
 
-	Point pt;
-	if (!Rules::FindAnySquareOfState(board, SquareState::Black, pt))
-	{
-		if (!Rules::FindAnySquareOfState(board, SquareState::Unknown, pt))
-		{
-			// TODO: handle edge case where there are only white squares
-			assert(0);
-		}
-	}
-	auto squares = Region((Board*)&board, pt)
-		.ExpandAllInline([](const Point&, const Square& sq) {
-			return sq.GetState() == SquareState::Black || sq.GetState() == SquareState::Unknown;
-		})
-		.GetSquares();
+	eval.existsBlack2x2 = Rules::ContainsBlack2x2(board);
 
-	bool ret = true;
-	board.ForEachSquare([&squares, &ret, this](const Point& pt, const Square& sq)
-	{
-		if (sq.GetState() == SquareState::Black && std::find(squares.begin(), squares.end(), pt) == squares.end())
-		{
-			ret = false;
-			return false;
-		}
-
-		if (sq.GetState() == SquareState::White && sq.GetOrigin() == (uint8_t)~0)
-		{
-			Region unconnectedWhite = Region((Board*)&board, pt)
-				.ExpandAllInline([](const Point&, const Square& sqInner) {
-					return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() == (uint8_t)~0;
-				});
-
-			Region pathToConnectWhite = Region(unconnectedWhite)
-				.ExpandAllInline([](const Point&, const Square& sqInner) {
-					return sqInner.GetState() == SquareState::Unknown;
-				});
-
-			Region reachableOriginTouchingWhites = pathToConnectWhite
-				.Neighbours([](const Point&, const Square& sqInner) {
-					return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() != (uint8_t)~0;
-				});
-
-			if (reachableOriginTouchingWhites.GetSquareCount() == 0)
-			{
-				ret = false;
-				return false;
-			}
-
-			reachableOriginTouchingWhites.ForEach([&unconnectedWhite, &pathToConnectWhite](const Point& pt, const Square& sq) {
-				if (sq.GetSize() <= unconnectedWhite.GetSquareCount())
-				{
-					pathToConnectWhite = Region::Subtract(pathToConnectWhite, Region(pathToConnectWhite.GetBoard(), pt).Neighbours());
-				}
-				return true;
-			});
-
-			reachableOriginTouchingWhites = pathToConnectWhite
-				.Neighbours([](const Point&, const Square& sqInner) {
-					return sqInner.GetState() == SquareState::White && sqInner.GetOrigin() != (uint8_t)~0;
-				});
-
-			if (reachableOriginTouchingWhites.GetSquareCount() == 0)
-			{
-				ret = false;
-				return false;
-			}
-
-			int maxSize = 0;
-			reachableOriginTouchingWhites.ForEach([&maxSize](const Point& pt, const Square& sq)
-			{
-				int size = sq.GetSize();
-				if (size > maxSize)
-					maxSize = size;
-				
-				return true;
-			});
-
-			if (unconnectedWhite.GetSquareCount() > maxSize)
-			{
-				ret = false;
-				return false;
-			}
-		}
-
-		return true;
-	});
-
-	if (!ret)
-		return false;
-
-	// check if there is no space to finish white
-	ForEachRegion([&ret](const Region& r)
-	{
-		if (r.GetState() != SquareState::White)
-			return true;
-
-		if (r.GetSameOrigin() == (uint8_t)~0)
-			return true;
-
-		Square sq;
-		if (!r.StartNeighbourSpill(sq))
-			return true;
-
-
-		return true;
-	});
-
-	return ret;
-}
-
-bool Solver::IsSolved()
-{
-	if (Rules::ContainsBlack2x2(board))
-		return false;
-
-	struct Results
-	{
-		bool existsBlackRegion = false;
-		bool existsMoreThanOneBlackRegion = false;
-		bool existsUnconnectedWhite = false;
-		bool existsMissizedFinishedWhite = false;
-		bool existsUnknownRegion = false;
-		//bool existsWhiteTouchingAnother = false;
-	};
-
-	Results results;
-	ForEachRegion([&results](const Region& r)
+	ForEachRegion([&eval](const Region& r)
 	{
 		if (r.GetState() == SquareState::Black)
 		{
-			if (results.existsBlackRegion)
+			if (eval.existsBlackRegion)
+				eval.existsMoreThanOneBlackRegion = true;
+			eval.existsBlackRegion = true;
+
+			if (!eval.existsClosedBlack)
 			{
-				results.existsMoreThanOneBlackRegion = true;
-				return false;
+				r.Neighbours([&eval](const Point&, const Square& sq)
+				{
+					if (sq.GetState() != SquareState::White)
+					{
+						eval.existsClosedBlack = true;
+						return false;
+					}
+					return true;
+				});
 			}
-			results.existsBlackRegion = true;
 		}
 		else if (r.GetState() == SquareState::White)
 		{
 			if (r.GetSameOrigin() == (uint8_t)~0)
 			{
-				results.existsUnconnectedWhite = true;
-				return false;
+				eval.existsUnconnectedWhite = true;
 			}
 			if (r.GetSquareCount() != r.GetSameSize())
 			{
-				results.existsMissizedFinishedWhite = true;
-				return false;
+				eval.existsMissizedFinishedWhite = true;
 			}
 		}
 		else if (r.GetState() == SquareState::Unknown)
 		{
-			results.existsUnknownRegion = true;
-			return false;
+			eval.existsUnknownRegion = true;
 		}
 		return true;
 	});
 
-	if (!results.existsBlackRegion ||
-		results.existsMoreThanOneBlackRegion ||
-		results.existsUnconnectedWhite ||
-		results.existsUnknownRegion ||
-		results.existsMissizedFinishedWhite)
-	{
-		return false;
-	}
-
-	return true;
+	return eval;
 }
 
 bool Solver::SolveDivergeBlack(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, float blackToUnknownRatio)
@@ -1193,91 +1067,67 @@ void Solver::SolveDiverge(Solver& solver, std::vector<Solver>& solverStack)
 	}
 }
 
-bool Solver::SolveWithRules(Solver& solver, int& iteration)
+int Solver::SolvePhase(int phase)
+{
+	static std::function<bool()> phases[] =
+	{
+		[this](){ return SolveInflateTrivial(SquareState::White); },
+		[this](){ return SolveInflateTrivial(SquareState::Black); },
+		[this](){ return SolvePerSquare(); },
+		[this](){ SolveUnreachable(); return true; },
+		[this](){ return SolveWhiteAtPredictableCorner(); },
+		[this](){ return SolveBalloonWhiteFillSpaceCompletely(); },
+		[this](){ SolveDisjointedBlack(); return true; },
+		[this](){ SolveBlackInCorneredWhite2By3(); return true; },
+		[this](){ return SolveBalloonWhiteSimple(); },
+		[this](){ return SolveBlackAroundWhite(); },
+	};
+
+	if (phase >= sizeof(phases) / sizeof(*phases))
+		return -1;
+
+	bool ret = phases[phase]();
+
+	if (ret)
+		return 1;
+
+	return 0;
+}
+
+bool Solver::SolveWithRules()
 {
 	int phase = 0;
 	bool hasChangedInPrevLoop = true;
 
-	while (!Rules::IsSolved(solver.board))
+	while (true)
 	{
-		Board boardIterationStart = solver.board;
+		Board boardIterationStart = board;
 
-		int phasePrev = phase;
-		int iterationPrev = iteration;
-		iteration++;
-
-		if (iteration == 23)
+		if (iteration == 164)
 		{
 			int a = 0;
 		}
 
-		if (phase == 0)
-		{
-			if (!solver.SolveInflateTrivial(SquareState::White))
-				return false;
-		}
-		else if (phase == 1)
-		{
-			if (!solver.SolveInflateTrivial(SquareState::Black))
-				return false;
-		}
-		else if (phase == 2)
-		{
-			if (!solver.SolvePerSquare())
-				return false;
-		}
-		else if (phase == 3)
-		{
-			solver.SolveUnreachable();
-		}
-		else if (phase == 4)
-		{
-			if (!solver.SolveUnfinishedWhiteIsland())
-				return false;
-		}
-		else if (phase == 5)
-		{
-			if (!solver.SolveWhiteAtClosedBlack())
-				return false;
-		}
-		else if (phase == 6)
-		{
-			if (!solver.SolveBlackAtPredictableCorner())
-				return false;
-		}
-		else if (phase == 7)
-		{
-			if (!solver.SolveBalloonWhiteFillSpaceCompletely())
-				return false;
-		}
-		else if (phase == 8)
-		{
-			solver.SolveDisjointedBlack();
-		}
-		else if (phase == 9)
-		{
-			solver.SolveBlackInCorneredWhite2By3();
-		}
-		else if (phase == 10)
-		{
-			if (!solver.SolveBalloonWhiteSimple())
-				return false;
-		}
-		else
-		{
+		int ret = SolvePhase(phase);
+		if (ret < 0)
 			break;
-		}
 
-		hasChangedInPrevLoop = (solver.board != boardIterationStart);
+		if (ret == 0)
+			return false;
+
+		hasChangedInPrevLoop = (board != boardIterationStart);
 		if (!hasChangedInPrevLoop)
+		{
 			phase++;
+		}
 		else
 		{
 			//boardIterationStart.Print(std::cout);
-			solver.board.Print(std::cout);
+			board.Print(std::cout);
 
 			phase = 0;
 		}
+		iteration++;
 	}
 
 	return true;
@@ -1305,70 +1155,54 @@ void Solver::ForEachRegion(const std::function<bool(const Region &)>& callback)
 }
 
 
-bool Solver::Solve(Solver& initialSolver)
+bool Solver::Solve()
 {
-	using namespace std;
-
-	srand(1);
-
-	initialSolver.Initialize();
-	if (!initialSolver.CheckForSolvedWhites())
+	Initialize();
+	if (!CheckForSolvedWhites())
 		return false;
 
-	std::vector<Solver> solverStack;
-	solverStack.push_back(initialSolver);
-
-	auto timeStart = std::chrono::system_clock::now();
+	solverStack.clear();
+	solverStack.push_back(*this);
 
 	int iteration = 0;
 	while (true)
 	{
 		if (solverStack.size() == 0)
 		{
-			std::cout << "Unable to solve provided board" << std::endl;
 			return false;
 		}
 
 		int	solverIndex;
 
-		if (false) //solverStack.size() < 5)
-			solverIndex = rand() % solverStack.size();
-		else
-			solverIndex = solverStack.size() - 1;
+		// if (false) //solverStack.size() < 5)
+		// 	solverIndex = rand() % solverStack.size();
+		// else
+		solverIndex = solverStack.size() - 1;
 
 		Solver solver = solverStack[solverIndex];
 		solverStack.erase(solverStack.begin() + solverIndex);
 
-		if (!SolveWithRules(solver, iteration))
+		if (!solver.SolveWithRules())
 			continue;
 
-		if (solver.IsSolved())
+		auto eval = solver.Evaluate();
+
+		if (eval.IsSolved())
 		{
-			std::cout << std::endl << std::endl << std::endl;
-			std::cout << "   --- Starting board ---   " << std::endl;
-			initialSolver.board.Print(std::cout);
-			std::cout << "   ---  Solved board  ---   " << std::endl;
-			solver.board.Print(std::cout);
-			std::cout << std::endl;
+			board = solver.board;
+			solverStack.clear(0;)
 			break;
 		}
 		
-		if (!solver.IsSolvable() || !solver.unsolvedWhites.size())
+		if (!eval.IsSolvable())
 			continue;
 
-		std::cout << "Iteration #" << iteration << std::endl;
-		solver.board.Print(std::cout);
-		std::cout << std::endl;
+		// std::cout << "Iteration #" << iteration << std::endl;
+		// solver.board.Print(std::cout);
+		// std::cout << std::endl;
 
 		SolveDiverge(solver, solverStack);
 	}
-
-	auto timeStop = std::chrono::system_clock::now();
-	double timeElapsed = (timeStop - timeStart).count() / 1'000'000.0;
-
-	std::cout
-		<< "Runtime: " << timeElapsed << "ms" << std::endl
-		<< "Iterations: " << iteration << std::endl;
 
 	return true;
 }

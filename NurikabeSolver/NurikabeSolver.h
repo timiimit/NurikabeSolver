@@ -19,10 +19,16 @@ namespace Nurikabe
 		std::vector<int> unsolvedWhites;
 		std::vector<Point> startOfUnconnectedWhite;
 
+		std::vector<Solver> solverStack;
+		int iteration;
+
 	public:
 		Square GetInitialWhite(int initialWhiteIndex);
+
 		const Board& GetBoard() const { return board; }
 		Board& GetBoard() { return board; }
+
+		int GetIteration() const { return iteration; }
 
 	public:
 		Solver(const Board& initialBoard);
@@ -62,9 +68,36 @@ namespace Nurikabe
 
 		void SolveDisjointedBlack();
 
-		bool IsSolvable();
+	public:
+		struct Evaluation
+		{
+			bool existsBlackRegion = false;
+			bool existsMoreThanOneBlackRegion = false;
+			bool existsClosedBlack = false;
+			bool existsBlack2x2 = false;
 
-		bool IsSolved();
+			bool existsUnknownRegion = false;
+
+			bool existsUnconnectedWhite = false;
+			bool existsMissizedFinishedWhite = false;
+			//bool existsWhiteTouchingAnother = false;
+
+			bool IsSolved() const
+			{
+				return
+					existsBlackRegion && !existsMoreThanOneBlackRegion && !existsClosedBlack && !existsBlack2x2 &&
+					!existsUnknownRegion && !existsUnconnectedWhite && !existsMissizedFinishedWhite;
+			}
+
+			bool IsSolvable() const
+			{
+				return
+					!existsClosedBlack && !existsBlack2x2 &&
+					!existsMissizedFinishedWhite;
+			}
+		};
+
+		Evaluation Evaluate();
 
 		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
 		bool SolveGuessBlackToUnblock(int minSize);
@@ -77,12 +110,13 @@ namespace Nurikabe
 		static bool SolveDivergeBlack(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, float blackToUnknownRatio);
 		static bool SolveDivergeWhite(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, int maxSizeOfWhiteToDiverge);
 		static void SolveDiverge(Solver& solver, std::vector<Solver>& solverStack);
-		static bool SolveWithRules(Solver& solver, int& iteration);
 
 		
 		void ForEachRegion(const RegionDelegate& callback);
 
 	public:
-		static bool Solve(Solver& solver);
+		int SolvePhase(int phase);
+		bool SolveWithRules();
+		bool Solve();
 	};
 }
