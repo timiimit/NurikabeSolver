@@ -160,7 +160,7 @@ bool Rules::IsSolvable(const Board& board)
 			return sq.GetState() == SquareState::Black || sq.GetState() == SquareState::Unknown;
 		})
 		.GetSquares();
-	
+
 	bool ret = true;
 	board.ForEachSquare([&squares, &ret, &board](const Point& pt, const Square& sq)
 	{

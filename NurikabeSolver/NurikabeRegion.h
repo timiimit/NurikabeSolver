@@ -8,7 +8,7 @@ namespace Nurikabe
 	class Board;
 	class Region;
 
-	typedef std::function<bool(const Region&)> RegionDelegate;
+	typedef std::function<bool(Region&)> RegionDelegate;
 
 	class Region
 	{

@@ -60,6 +60,8 @@ namespace Nurikabe
 		bool SolveBalloonWhiteFillSpaceCompletely();
 
         bool SolveBlackAroundWhite();
+		bool SolveHighLevelRecursive(bool allowRecursion);
+
         bool SolveWhiteAtPredictableCorner();
 
         void SolveBalloonBlack();
@@ -79,21 +81,27 @@ namespace Nurikabe
 			bool existsUnknownRegion = false;
 
 			bool existsUnconnectedWhite = false;
-			bool existsMissizedFinishedWhite = false;
+			bool existsTooLargeWhite = false;
 			//bool existsWhiteTouchingAnother = false;
 
 			bool IsSolved() const
 			{
-				return
-					existsBlackRegion && !existsMoreThanOneBlackRegion && !existsClosedBlack && !existsBlack2x2 &&
-					!existsUnknownRegion && !existsUnconnectedWhite && !existsMissizedFinishedWhite;
+				bool common = !existsUnknownRegion && !existsUnconnectedWhite && !existsTooLargeWhite;
+				
+				if (!existsBlackRegion)
+					return common;
+
+				return !existsMoreThanOneBlackRegion && existsClosedBlack && !existsBlack2x2 && common;
 			}
 
 			bool IsSolvable() const
 			{
+				if (IsSolved())
+					return true;
+
 				return
 					!existsClosedBlack && !existsBlack2x2 &&
-					!existsMissizedFinishedWhite;
+					!existsTooLargeWhite;
 			}
 		};
 
@@ -115,8 +123,8 @@ namespace Nurikabe
 		void ForEachRegion(const RegionDelegate& callback);
 
 	public:
-		int SolvePhase(int phase);
-		bool SolveWithRules();
+		int SolvePhase(int phase, bool allowRecursion);
+		bool SolveWithRules(bool allowRecursion);
 		bool Solve();
 	};
 }
