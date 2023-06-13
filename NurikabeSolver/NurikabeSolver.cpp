@@ -611,92 +611,84 @@ bool Solver::SolveBalloonWhiteFillSpaceCompletely()
 	return true;
 }
 
-bool Solver::SolveWhiteAtClosedBlack()
+bool Solver::SolveBlackAroundWhite()
 {
-	/// TODO: could also handle @p unsolvedWhites
-	for (int i = 0; i < startOfUnconnectedWhite.size(); i++)
+	ForEachRegion([this](const Region& black)
 	{
-		auto white = Region(&board, startOfUnconnectedWhite[i])
-			.ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; });
+		if (black.GetState() != SquareState::Black)
+			return true;
+
 		
-		auto newlyAdded = Region(&board);
+		Region unknown = black.Neighbours(SquareState::Unknown);
+		Region around = unknown.Neighbours();
 
-		auto unknownSkip = white.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; });
-		auto unknownPrev = Region(unknownSkip);
-		while (true)
+		bool foundSolved = false;
+
+		unknown.ForEach([this, &foundSolved, &unknown, &around](const Point& pt, const Square& sq)
 		{
-			auto unknown = unknownPrev.Neighbours(
-				[&unknownSkip](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown && !unknownSkip.Contains(pt); }
-			);
+			if (foundSolved)
+				return true;
 
-			if (unknown.GetSquareCount() != 1)
-				break;
+			Solver solver = Solver(*this);
+			solver.board.Get(pt).SetState(SquareState::Black);
+			
+			if (!solver.SolveWithRules())
+				return true;
 
-			auto before = newlyAdded.GetSquareCount();
-			newlyAdded = Region::Union(newlyAdded, unknown);
+			auto eval = solver.Evaluate();
 
-			if (newlyAdded.GetSquareCount() == before)
-				break;
-
-			unknownPrev = unknown;
-		}
-
-		if (newlyAdded.GetSquareCount() > 1)
-		{
-			auto black = white
-				.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Black; })
-				.ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::Black; });
-
-			if (black.IsContiguous())
+			if (eval.IsSolved())
 			{
-				if (unknownSkip == black.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; }))
-				{
-					black = Region::Union(black, unknownSkip.Neighbours([&black](const Point& pt, Square& square) { return square.GetState() == SquareState::Black && !black.Contains(pt); }));
-
-					Region blackNew = Region(&board);
-					bool isValid = true;
-					unknownSkip.ForEachContiguousRegion([&blackNew, &isValid](const Region& r)
-					{
-						if (r.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Black; }).GetSquareCount() == 2 &&
-							r.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; }).GetSquareCount() == 1 &&
-							r.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; }).GetSquareCount() == 1)
-						{
-							blackNew = Region(r);
-							return true;
-						}
-						else if (r.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Black; }).GetSquareCount() == 1 &&
-							r.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; }).GetSquareCount() == 1 &&
-							r.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; }).GetSquareCount() == 1)
-						{
-							return true;
-						}
-						else
-						{
-							isValid = false;
-							return false;
-						}
-					});
-
-					if (isValid)
-					{
-						blackNew.SetState(SquareState::Black);
-						Region::Subtract(unknownSkip, blackNew).SetState(SquareState::White);
-						newlyAdded.SetState(SquareState::White);
-
-						if (!CheckForSolvedWhites())
-							return false;
-
-						return true;
-					}
-				}
+				// adopt board
+				board = solver.GetBoard();
+				iteration += solver.iteration;
+				foundSolved = true;
+				return false;
 			}
-		}
-	}
+
+			if (eval.IsSolvable())
+			{
+				solverStack.push_back(solver);
+			}
+
+			return true;
+		});
+
+		return true;
+
+		// Region unknown = Region((Board*)black.GetBoard());
+		// Region spill;
+		// do
+		// {
+		// 	spill = black.Neighbours(SquareState::Unknown);
+		// 	unknown = Region::Union(unknown, spill);
+		// }
+		// while (spill.GetSquareCount() > 1);
+
+		// Region blackAndUnknown = Region::Union(black, unknown);
+
+		// auto whites = black.Neighbours(SquareState::White);
+		// whites.ForEachContiguousRegion([&blackAndUnknown](const Region& whitePart)
+		// {
+		// 	auto white = Region(whitePart).ExpandAllInline(SquareState::White);
+		// 	auto whiteNeighbours = white.Neighbours();
+
+		// 	if (Region::Intersection(whiteNeighbours, blackAndUnknown) == whiteNeighbours)
+		// 	{
+		// 		// found an isolated white
+		// 		// ensure that is has enough space
+		// 	}
+
+		// 	return true;
+		// });
+		
+		// return true;
+	});
 
 	return true;
 }
 
-bool Solver::SolveBlackAtPredictableCorner()
+bool Solver::SolveWhiteAtPredictableCorner()
 {
 	bool ret = true;
 	ForEachRegion([this, &ret](const Region& r)

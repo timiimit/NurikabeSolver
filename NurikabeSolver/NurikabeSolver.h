@@ -59,8 +59,8 @@ namespace Nurikabe
 
 		bool SolveBalloonWhiteFillSpaceCompletely();
 
-        bool SolveWhiteAtClosedBlack();
-        bool SolveBlackAtPredictableCorner();
+        bool SolveBlackAroundWhite();
+        bool SolveWhiteAtPredictableCorner();
 
         void SolveBalloonBlack();
 
