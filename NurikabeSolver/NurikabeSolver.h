@@ -58,6 +58,8 @@ namespace Nurikabe
 
         void SolveBalloonBlack();
 
+		void SolveBlackInCorneredWhite2By3();
+
 		void SolveDisjointedBlack();
 
 		bool IsSolvable();

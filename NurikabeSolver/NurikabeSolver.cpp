@@ -774,6 +774,46 @@ bool Solver::SolveBlackAtPredictableCorner()
 	return ret;
 }
 
+void Solver::SolveBlackInCorneredWhite2By3()
+{
+	ForEachRegion([](const Region& r)
+	{
+		if (r.GetState() != SquareState::White)
+			return true;
+
+		Square sq;
+		if (!r.StartNeighbourSpill(sq))
+			return true;
+
+		auto spill = r.NeighbourSpill(sq);
+
+		if (spill.GetSquareCount() != 2)
+			return true;
+
+		auto a = Region(spill.GetBoard(), spill.GetSquares()[0]).Neighbours([](const Point&, const Square& sq) { return sq.GetState() == SquareState::Unknown; });
+		auto b = Region(spill.GetBoard(), spill.GetSquares()[1]).Neighbours([](const Point&, const Square& sq) { return sq.GetState() == SquareState::Unknown; });
+
+		auto possiblyBlack = Region::Intersection(a, b);
+
+		if (possiblyBlack.GetSquareCount() != 1)
+			return true;
+
+		auto connectedWhite = possiblyBlack.Neighbours([&sq](const Point&, const Square& sqInner)
+		{
+			return
+				sqInner.GetState() == SquareState::White &&
+				sqInner.GetOrigin() != (uint8_t)~0 &&
+				sqInner.GetOrigin() != sq.GetOrigin();
+		});
+
+		if (connectedWhite.GetSquareCount() != 1)
+			return true;
+
+		possiblyBlack.SetState(SquareState::Black);
+		return false;
+	});
+}
+
 void Solver::SolveDisjointedBlack()
 {
 	ForEachRegion([](const Region& black)
@@ -1220,6 +1260,10 @@ bool Solver::SolveWithRules(Solver& solver, int& iteration)
 			solver.SolveDisjointedBlack();
 		}
 		else if (phase == 9)
+		{
+			solver.SolveBlackInCorneredWhite2By3();
+		}
+		else if (phase == 10)
 		{
 			if (!solver.SolveBalloonWhiteSimple())
 				return false;
