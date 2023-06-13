@@ -72,6 +72,10 @@ namespace Nurikabe
 		{
 			return Neighbours([](const Point&, Square&) { return true; });
 		}
+		Region Neighbours(SquareState state) const
+		{
+			return Neighbours([state](const Point&, Square& sq) { return sq.GetState() == state; });
+		}
 		Region& ExpandSingleInline()
 		{
 			return ExpandSingleInline([](const Point&, Square&) { return true; });
