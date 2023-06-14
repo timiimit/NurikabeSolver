@@ -20,61 +20,47 @@ namespace Nurikabe
 		std::vector<Point> startOfUnconnectedWhite;
 
 		std::vector<Solver> solverStack;
+		std::vector<Solver> solutions;
 		int* iteration;
 		int depth;
 		int id;
 
 	public:
-		Square GetInitialWhite(int initialWhiteIndex);
+		struct SolveSettings
+		{
+			int maxDepth = -1;
+			int stopAtIteration = -1;
+			bool stopAtFirstSolution = true;
 
-		const Board& GetBoard() const { return board; }
-		Board& GetBoard() { return board; }
+			SolveSettings Next() const
+			{
+				SolveSettings ret = *this;
+				if (ret.maxDepth > 0)
+					ret.maxDepth--;
+				return ret;
+			}
 
-		int GetIteration() const { return *iteration; }
+			static SolveSettings StopAtIteration(int iteration)
+			{
+				SolveSettings ret;
+				ret.stopAtIteration = iteration;
+				return ret;
+			}
 
-	public:
-		Solver(const Board& initialBoard, int* iteration);
-		Solver(const Solver& other);
+			static SolveSettings FindAllSolutions()
+			{
+				SolveSettings ret;
+				ret.stopAtFirstSolution = false;
+				return ret;
+			}
 
-		Solver& operator=(const Solver& other);
-
-	private:
-		void Initialize();
-
-	private:
-		bool SolveInflateTrivial(SquareState state);
-
-		bool SolvePerSquare();
-
-		/// @brief Solves squares that cannot be reached by any white
-		void SolveUnreachable();
-
-		/// @brief Solves standalone islands by finding which squares are forced to white
-		bool SolveUnfinishedWhiteIsland();
-
-		/// @brief Solves whites which expand and then guaranteed contract into a single line
-		bool SolveBalloonWhite();
-
-        bool SolveBalloonUnconnectedWhite();
-
-        bool SolveBalloonWhiteSimple();
-
-        int SolveBalloonWhiteSimpleSingle(Point pt);
-
-		bool SolveBalloonWhiteFillSpaceCompletely();
-
-        bool SolveBlackAroundWhite();
-		bool SolveHighLevelRecursive(bool allowRecursion);
-
-		bool SolveUnconnectedWhiteHasOnlyOnePossibleOrigin();
-
-        bool SolveWhiteAtPredictableCorner(bool allowRecursion);
-
-        void SolveBalloonBlack();
-
-		void SolveBlackInCorneredWhite2By3();
-
-		void SolveDisjointedBlack();
+			static SolveSettings NoRecursion()
+			{
+				SolveSettings ret;
+				ret.maxDepth = 0;
+				return ret;
+			}
+		};
 
 	public:
 		struct Evaluation
@@ -115,24 +101,72 @@ namespace Nurikabe
 
 		Evaluation Evaluate();
 
-		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
-		bool SolveGuessBlackToUnblock(int minSize);
+	public:
+		Square GetInitialWhite(int initialWhiteIndex);
+
+		const Board& GetBoard() const { return board; }
+		Board& GetBoard() { return board; }
+
+		int GetIteration() const { return *iteration; }
+
+	public:
+		Solver(const Board& initialBoard, int* iteration);
+		Solver(const Solver& other);
+
+		Solver& operator=(const Solver& other);
 
 	private:
-		/// @brief Removes any solved white that is still in @p unsolvedWhites .
-		bool CheckForSolvedWhites();
-
-	private:
-		static bool SolveDivergeBlack(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, float blackToUnknownRatio);
-		static bool SolveDivergeWhite(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, int maxSizeOfWhiteToDiverge);
-		static void SolveDiverge(Solver& solver, std::vector<Solver>& solverStack);
-
+		void Initialize();
 		
 		void ForEachRegion(const RegionDelegate& callback);
 
+	private:
+
+		bool SolveInflateTrivial(SquareState state);
+
+		bool SolvePerSquare();
+
+		/// @brief Solves squares that cannot be reached by any white
+		void SolveUnreachable();
+
+		/// @brief Solves standalone islands by finding which squares are forced to white
+		bool SolveUnfinishedWhiteIsland();
+
+		/// @brief Solves whites which expand and then guaranteed contract into a single line
+		bool SolveBalloonWhite();
+
+        bool SolveBalloonUnconnectedWhite();
+
+        bool SolveBalloonWhiteSimple();
+
+        int SolveBalloonWhiteSimpleSingle(Point pt);
+
+		bool SolveBalloonWhiteFillSpaceCompletely();
+
+        bool SolveBlackAroundWhite();
+
+		bool SolveUnconnectedWhiteHasOnlyOnePossibleOrigin();
+
+        bool SolveWhiteAtPredictableCorner(const SolveSettings& settings);
+		bool SolveHighLevelRecursive(const SolveSettings& settings);
+
+        void SolveBalloonBlack();
+
+		void SolveBlackInCorneredWhite2By3();
+
+		void SolveDisjointedBlack();
+
+		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
+		bool SolveGuessBlackToUnblock(int minSize);
+
+		/// @brief Removes any solved white that is still in @p unsolvedWhites .
+		bool CheckForSolvedWhites();
+
+		int SolvePhase(int phase, const SolveSettings& settings);
+		bool SolveWithRules(const SolveSettings& settings);
+
 	public:
-		int SolvePhase(int phase, bool allowRecursion);
-		bool SolveWithRules(bool allowRecursion);
-		bool Solve();
+		bool Solve(const SolveSettings& settings = SolveSettings{-1, -1, true});
+		
 	};
 }

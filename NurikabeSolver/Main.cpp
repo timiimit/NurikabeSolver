@@ -5,7 +5,7 @@
 int main()
 {
 	Nurikabe::Board board;
-	if (!board.Load("10x18-3.txt"))
+	if (!board.Load("10x18-4.txt"))
 	{
 		std::cout << "failed to read file" << std::endl;
 		return 1;
@@ -17,7 +17,8 @@ int main()
 
 	auto timeStart = std::chrono::system_clock::now();
 
-	auto isSolved = solver.Solve();
+	Nurikabe::Solver::SolveSettings settings;
+	auto isSolved = solver.Solve(settings);
 
 	auto timeStop = std::chrono::system_clock::now();
 	double timeElapsed = (timeStop - timeStart).count() / 1'000'000.0;

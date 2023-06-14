@@ -26,6 +26,10 @@ Solver::Solver(const Solver& other)
 	, initialWhites(other.initialWhites)
 	, unsolvedWhites(other.unsolvedWhites)
 	, startOfUnconnectedWhite(other.startOfUnconnectedWhite)
+
+	//, solverStack(other.solverStack)
+	//, solutions(other.solutions)
+
 	, iteration(other.iteration)
 	, depth(other.depth)
 	, id(nextSolverID++)
@@ -38,8 +42,11 @@ Solver& Solver::operator=(const Solver& other)
 	initialWhites = other.initialWhites;
 	unsolvedWhites = other.unsolvedWhites;
 	startOfUnconnectedWhite = other.startOfUnconnectedWhite;
-	iteration = other.iteration;
+
 	solverStack = other.solverStack;
+	solutions = other.solutions;
+
+	iteration = other.iteration;
 	depth = other.depth;
 	id = other.id;
 
@@ -930,9 +937,9 @@ bool Solver::SolveUnconnectedWhiteHasOnlyOnePossibleOrigin()
 	return true;
 }
 
-bool Solver::SolveHighLevelRecursive(bool allowRecursion)
+bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 {
-	if (!allowRecursion)
+	if (settings.maxDepth == 0)
 		return true;
 
 	Region optimalBlackRegion;
@@ -993,7 +1000,7 @@ bool Solver::SolveHighLevelRecursive(bool allowRecursion)
 
 	int solvableFound = 0;
 
-	unknown.ForEach([this, &solvableFound, &unknown](const Point& pt, const Square& sq)
+	unknown.ForEach([this, &settings, &solvableFound, &unknown](const Point& pt, const Square& sq)
 	{
 		if (solvableFound > 1)
 			return false;
@@ -1012,7 +1019,7 @@ bool Solver::SolveHighLevelRecursive(bool allowRecursion)
 		solver.depth++;
 		solver.board.Get(pt).SetState(SquareState::Black);
 		
-		if (!solver.SolveWithRules(false))
+		if (!solver.SolveWithRules(settings.Next()))
 			return true;
 
 		if (depth == 3)
@@ -1133,17 +1140,17 @@ bool Solver::SolveHighLevelRecursive(bool allowRecursion)
 	return true;
 }
 
-bool Solver::SolveWhiteAtPredictableCorner(bool allowRecursion)
+bool Solver::SolveWhiteAtPredictableCorner(const SolveSettings& settings)
 {
 	bool ret = true;
-	ForEachRegion([this, &ret](const Region& black)
+	ForEachRegion([this, &settings, &ret](const Region& black)
 	{
 		if (black.GetState() != SquareState::Black)
 			return true;
 		
 		auto unknowns = black.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; });
 		
-		unknowns.ForEachContiguousRegion([this, &ret, &black](Region& unknown)
+		unknowns.ForEachContiguousRegion([this, &settings, &ret, &black](Region& unknown)
 		{
 			if (unknown.GetSquareCount() != 2)
 				return true;
@@ -1178,7 +1185,7 @@ bool Solver::SolveWhiteAtPredictableCorner(bool allowRecursion)
 			if (!solverCopy.CheckForSolvedWhites())
 				return true;
 
-			if (!solverCopy.SolveWithRules(true))
+			if (!solverCopy.SolveWithRules(settings.Next()))
 				return true;
 
 			auto eval = solverCopy.Evaluate();
@@ -1382,7 +1389,7 @@ Solver::Evaluation Solver::Evaluate()
 	return eval;
 }
 
-int Solver::SolvePhase(int phase, bool allowRecursion)
+int Solver::SolvePhase(int phase, const SolveSettings& settings)
 {
 	std::function<bool()> phases[] =
 	{
@@ -1395,8 +1402,8 @@ int Solver::SolvePhase(int phase, bool allowRecursion)
 		[this](){ SolveBlackInCorneredWhite2By3(); return true; },
 		[this](){ return SolveBalloonWhiteSimple(); },
 		[this](){ return SolveUnconnectedWhiteHasOnlyOnePossibleOrigin(); },
-		[this, allowRecursion](){ return SolveWhiteAtPredictableCorner(allowRecursion); },
-		[this, allowRecursion](){ return SolveHighLevelRecursive(allowRecursion); },
+		[this, settings](){ return SolveWhiteAtPredictableCorner(settings); },
+		[this, settings](){ return SolveHighLevelRecursive(settings); },
 	};
 
 	if (phase >= sizeof(phases) / sizeof(*phases))
@@ -1410,7 +1417,7 @@ int Solver::SolvePhase(int phase, bool allowRecursion)
 	return 0;
 }
 
-bool Solver::SolveWithRules(bool allowRecursion)
+bool Solver::SolveWithRules(const SolveSettings& settings)
 {
 	int phase = 0;
 	bool hasChangedInPrevLoop = true;
@@ -1427,7 +1434,7 @@ bool Solver::SolveWithRules(bool allowRecursion)
 			int a = 0;
 		}
 
-		int ret = SolvePhase(phase, allowRecursion);
+		int ret = SolvePhase(phase, settings);
 		if (ret < 0)
 			break;
 
@@ -1466,6 +1473,9 @@ bool Solver::SolveWithRules(bool allowRecursion)
 				if (!eval.IsSolvable())
 					break;
 			}
+
+			if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
+				break;
 		}
 	}
 
@@ -1494,7 +1504,7 @@ void Solver::ForEachRegion(const std::function<bool(Region &)>& callback)
 }
 
 
-bool Solver::Solve()
+bool Solver::Solve(const SolveSettings& settings)
 {
 	Initialize();
 	if (!CheckForSolvedWhites())
@@ -1513,7 +1523,7 @@ bool Solver::Solve()
 		Solver solver = solverStack[solverIndex];
 		solverStack.erase(solverStack.begin() + solverIndex);
 
-		if (!solver.SolveWithRules(true))
+		if (!solver.SolveWithRules(settings))
 			continue;
 
 		auto eval = solver.Evaluate();
