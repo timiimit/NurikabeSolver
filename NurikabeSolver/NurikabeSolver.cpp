@@ -182,16 +182,6 @@ bool Nurikabe::Solver::SolveHighLevelRecursive(const SolveSettings& settings, co
 		//if (solvableFound > 1)
 		//	return false;
 
-		if (id == 53 && GetIteration() == 187)
-		{
-			int a = 0;
-		}
-
-		if (GetIteration() > 92)
-		{
-			int a = 0;
-		}
-
 		// Do a breadth search over all possible placements of black squares
 		Solver solver = Solver(*this);
 		solver.depth++;
@@ -214,11 +204,6 @@ bool Nurikabe::Solver::SolveHighLevelRecursive(const SolveSettings& settings, co
 		std::cout << "Depth: " << solver.depth << std::endl;
 		std::cout << "Iteration: " << *solver.iteration << std::endl;
 
-		if (GetIteration() == 810)
-		{
-			int a = 0;
-		}
-
 		auto eval = solver.Evaluate();
 
 		if (eval.IsSolved())
@@ -238,19 +223,10 @@ bool Nurikabe::Solver::SolveHighLevelRecursive(const SolveSettings& settings, co
 
 		if (eval.IsSolvable())
 		{
-			if (GetIteration() >= 107)
-			{
-				int a = 0;
-			}
-
 			if (solver.GetBoard() != GetBoard())
 			{
 				solvableFound++;
 				solverStack.push_back(solver);
-			}
-			else
-			{
-				int a = 0;
 			}
 		}
 
@@ -324,17 +300,8 @@ bool Nurikabe::Solver::SolveHighLevelRecursive(const SolveSettings& settings, co
 
 	if (solvableFound == 1)
 	{
-		if (GetIteration() == 108)
-		{
-			int a = 0;
-		}
 		*this = this->solverStack.back();
 		depth--;
-	}
-
-	if (solvableFound > 1)
-	{
-		int a = 0;
 	}
 
 	return true;
@@ -626,11 +593,6 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 	{
 		Board boardIterationStart = board;
 
-		if (*iteration == 164)
-		{
-			int a = 0;
-		}
-
 		int ret = SolvePhase(phase, settings);
 
 		if (ret < 0)
@@ -648,17 +610,6 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		}
 		
 		UpdateContiguousRegions();
-
-		//if (*iteration == 92)
-		if (*iteration == 799)
-		{
-			int a = 0;
-		}
-
-		if (*iteration == 381)
-		{
-			int a = 0;
-		}
 
 		board.Print(std::cout);
 		std::cout << "Depth: " << depth << std::endl;
