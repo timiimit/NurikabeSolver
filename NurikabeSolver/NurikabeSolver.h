@@ -20,9 +20,86 @@ namespace Nurikabe
 		std::vector<Point> startOfUnconnectedWhite;
 
 		std::vector<Solver> solverStack;
+		std::vector<Solver> solutions;
 		int* iteration;
 		int depth;
 		int id;
+
+	public:
+		struct SolveSettings
+		{
+			int maxDepth = -1;
+			int stopAtIteration = -1;
+			bool stopAtFirstSolution = true;
+
+			SolveSettings Next() const
+			{
+				SolveSettings ret = *this;
+				if (ret.maxDepth > 0)
+					ret.maxDepth--;
+				return ret;
+			}
+
+			static SolveSettings StopAtIteration(int iteration)
+			{
+				SolveSettings ret;
+				ret.stopAtIteration = iteration;
+				return ret;
+			}
+
+			static SolveSettings FindAllSolutions()
+			{
+				SolveSettings ret;
+				ret.stopAtFirstSolution = false;
+				return ret;
+			}
+
+			static SolveSettings NoRecursion()
+			{
+				SolveSettings ret;
+				ret.maxDepth = 0;
+				return ret;
+			}
+		};
+
+	public:
+		struct Evaluation
+		{
+			bool existsBlackRegion = false;
+			bool existsMoreThanOneBlackRegion = false;
+			bool existsClosedBlack = false;
+			bool existsBlack2x2 = false;
+
+			bool existsUnknownRegion = false;
+
+			bool existsUnconnectedWhite = false;
+			bool existsUnconnectedClosedWhite = false;
+			bool existsTooLargeWhite = false;
+			double progress = 0.0;
+			//bool existsWhiteTouchingAnother = false;
+
+			bool IsSolved() const
+			{
+				bool common = !existsUnknownRegion && !existsUnconnectedWhite && !existsTooLargeWhite && !existsUnconnectedClosedWhite && progress == 1.0;
+				
+				if (!existsBlackRegion)
+					return common;
+
+				return !existsMoreThanOneBlackRegion && existsClosedBlack && !existsBlack2x2 && common;
+			}
+
+			bool IsSolvable() const
+			{
+				if (IsSolved())
+					return true;
+
+				return
+					!existsClosedBlack && !existsBlack2x2 &&
+					!existsTooLargeWhite && !existsUnconnectedClosedWhite;
+			}
+		};
+
+		Evaluation Evaluate();
 
 	public:
 		Square GetInitialWhite(int initialWhiteIndex);
@@ -40,8 +117,11 @@ namespace Nurikabe
 
 	private:
 		void Initialize();
+		
+		void ForEachRegion(const RegionDelegate& callback);
 
 	private:
+
 		bool SolveInflateTrivial(SquareState state);
 
 		bool SolvePerSquare();
@@ -64,11 +144,8 @@ namespace Nurikabe
 		bool SolveBalloonWhiteFillSpaceCompletely();
 
         bool SolveBlackAroundWhite();
-		bool SolveHighLevelRecursive(bool allowRecursion);
 
 		bool SolveUnconnectedWhiteHasOnlyOnePossibleOrigin();
-
-        bool SolveWhiteAtPredictableCorner(bool allowRecursion);
 
         void SolveBalloonBlack();
 
@@ -76,62 +153,22 @@ namespace Nurikabe
 
 		void SolveDisjointedBlack();
 
-	public:
-		struct Evaluation
-		{
-			bool existsBlackRegion = false;
-			bool existsMoreThanOneBlackRegion = false;
-			bool existsClosedBlack = false;
-			bool existsBlack2x2 = false;
-
-			bool existsUnknownRegion = false;
-
-			bool existsUnconnectedWhite = false;
-			bool existsUnconnectedClosedWhite = false;
-			bool existsTooLargeWhite = false;
-			//bool existsWhiteTouchingAnother = false;
-
-			bool IsSolved() const
-			{
-				bool common = !existsUnknownRegion && !existsUnconnectedWhite && !existsTooLargeWhite && !existsUnconnectedClosedWhite;
-				
-				if (!existsBlackRegion)
-					return common;
-
-				return !existsMoreThanOneBlackRegion && existsClosedBlack && !existsBlack2x2 && common;
-			}
-
-			bool IsSolvable() const
-			{
-				if (IsSolved())
-					return true;
-
-				return
-					!existsClosedBlack && !existsBlack2x2 &&
-					!existsTooLargeWhite && !existsUnconnectedClosedWhite;
-			}
-		};
-
-		Evaluation Evaluate();
-
 		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
 		bool SolveGuessBlackToUnblock(int minSize);
 
-	private:
 		/// @brief Removes any solved white that is still in @p unsolvedWhites .
 		bool CheckForSolvedWhites();
 
 	private:
-		static bool SolveDivergeBlack(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, float blackToUnknownRatio);
-		static bool SolveDivergeWhite(Solver& solver, std::vector<Solver>& solverStack, int maxDiverges, int maxSizeOfWhiteToDiverge);
-		static void SolveDiverge(Solver& solver, std::vector<Solver>& solverStack);
 
-		
-		void ForEachRegion(const RegionDelegate& callback);
+        bool SolveWhiteAtPredictableCorner(const SolveSettings& settings);
+		bool SolveHighLevelRecursive(const SolveSettings& settings);
+
+		int SolvePhase(int phase, const SolveSettings& settings);
+		bool SolveWithRules(const SolveSettings& settings);
 
 	public:
-		int SolvePhase(int phase, bool allowRecursion);
-		bool SolveWithRules(bool allowRecursion);
-		bool Solve();
+		bool Solve(const SolveSettings& settings = SolveSettings{-1, -1, true});
+		
 	};
 }

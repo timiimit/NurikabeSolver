@@ -4,7 +4,16 @@
 cmake_minimum_required (VERSION 3.8)
 
 # Add source to this project's executable.
-add_executable (NurikabeSolver "NurikabeRules.cpp" "NurikabeRules.h" "Main.cpp" "NurikabeBoard.h" "NurikabeBoard.cpp" "NurikabeSquare.h" "NurikabeSquare.cpp" "Nurikabe.h" "NurikabeSolver.h" "NurikabeSolver.cpp" "Point.h" "Point.cpp" "NurikabeRegion.h" "NurikabeRegion.cpp")
+add_executable(NurikabeSolver
+	"Point.h" "Point.cpp"
+	"NurikabeSquare.h" "NurikabeSquare.cpp"
+	"NurikabeBoard.h" "NurikabeBoard.cpp"
+	"NurikabeRegion.h" "NurikabeRegion.cpp"
+	"NurikabeRules.cpp" "NurikabeRules.h"
+	"NurikabeSolver.h" "NurikabeSolver.cpp" "NurikabeSolverRules.cpp"
+	"Nurikabe.h"
+	"Main.cpp"
+)
 file(
 	COPY
 		"5x5-easy.txt"
