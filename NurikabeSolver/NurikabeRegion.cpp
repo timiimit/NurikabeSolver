@@ -71,10 +71,27 @@ SquareState Region::GetState() const
 
 void Region::SetState(SquareState state) const
 {
-	for (int i = 0; i < squares.size(); i++)
+	switch (state)
 	{
-		board->Get(squares[i]).SetState(state);
+	case SquareState::Black:
+		for (int i = 0; i < squares.size(); i++)
+		{
+			board->SetBlack(squares[i]);
+		}
+		return;
+		
+	case SquareState::White:
+		for (int i = 0; i < squares.size(); i++)
+		{
+			board->SetWhite(squares[i]);
+		}
+		return;
+
+	default:
+		assert(0);
+		break;
 	}
+
 }
 
 uint8_t Region::GetSameSize() const
@@ -105,7 +122,7 @@ void Region::SetSize(uint8_t size) const
 {
 	for (int i = 0; i < squares.size(); i++)
 	{
-		board->Get(squares[i]).SetSize(size);
+		board->SetSize(squares[i], size);
 	}
 }
 
@@ -137,7 +154,7 @@ void Region::SetOrigin(uint8_t origin) const
 {
 	for (int i = 0; i < squares.size(); i++)
 	{
-		board->Get(squares[i]).SetOrigin(origin);
+		board->SetOrigin(squares[i], origin);
 	}
 }
 

@@ -37,6 +37,5 @@ namespace Nurikabe
 		bool operator==(const Square& other) const;
 	};
 
-	typedef std::function<bool(const Point& point, Square& square)> PointSquareDelegate;
-	typedef std::function<bool(const Point& point, const Square& square)> PointSquareConstDelegate;
+	typedef std::function<bool(const Point& point, const Square& square)> PointSquareDelegate;
 }

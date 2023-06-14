@@ -54,174 +54,174 @@ bool Solver::SolveInflateTrivial(SquareState state)
 bool Solver::SolvePerSquare()
 {
 	bool ret = true;
-	board.ForEachSquare([this, &ret](const Point& pt, Square& square)
+	board.ForEachSquare([this, &ret](const Point& pt, const Square& square)
+	{
+		if (pt == Point{5, 13})
 		{
-			if (pt == Point{5, 13})
-			{
-				int a = 0;
-			}
+			int a = 0;
+		}
 
-			if (square.GetState() == SquareState::Unknown)
-			{
-				Region whiteNeighbours = Region(&board, pt)
-					.Neighbours([](const Point& pt, Square& square) {
-						return square.GetState() == SquareState::White;
-					});
-
-
-				bool isSameOrigin = true;
-				uint8_t firstOrigin = (uint8_t)~0;
-				uint8_t firstSize = 0;
-				uint8_t longestUnconnectedWhite = 0;
-				whiteNeighbours.ForEachContiguousRegion([&isSameOrigin, &firstOrigin, &firstSize, &longestUnconnectedWhite](const Region& r)
-				{
-					if (r.GetSameOrigin() == (uint8_t)~0)
-					{
-						auto len = Region(r).ExpandAllInline([&longestUnconnectedWhite](const Point&, const Square& sq){
-							return sq.GetState() == SquareState::White;
-						}).GetSquareCount();
-
-						if (len > longestUnconnectedWhite)
-							longestUnconnectedWhite = len;
-					}
-					else
-					{
-						if (firstOrigin == (uint8_t)~0)
-						{
-							firstOrigin = r.GetSameOrigin();
-							firstSize = r.GetSameSize();
-						}
-						else if (firstOrigin != r.GetSameOrigin())
-						{
-							isSameOrigin = false;
-							return false;
-						}
-					}
-
-					return true;
+		if (square.GetState() == SquareState::Unknown)
+		{
+			Region whiteNeighbours = Region(&board, pt)
+				.Neighbours([](const Point& pt, const Square& square) {
+					return square.GetState() == SquareState::White;
 				});
 
-				if (isSameOrigin && firstOrigin != (uint8_t)~0 && longestUnconnectedWhite > firstSize)
+
+			bool isSameOrigin = true;
+			uint8_t firstOrigin = (uint8_t)~0;
+			uint8_t firstSize = 0;
+			uint8_t longestUnconnectedWhite = 0;
+			whiteNeighbours.ForEachContiguousRegion([&isSameOrigin, &firstOrigin, &firstSize, &longestUnconnectedWhite](const Region& r)
+			{
+				if (r.GetSameOrigin() == (uint8_t)~0)
 				{
-					isSameOrigin = false;
+					auto len = Region(r).ExpandAllInline([&longestUnconnectedWhite](const Point&, const Square& sq){
+						return sq.GetState() == SquareState::White;
+					}).GetSquareCount();
+
+					if (len > longestUnconnectedWhite)
+						longestUnconnectedWhite = len;
+				}
+				else
+				{
+					if (firstOrigin == (uint8_t)~0)
+					{
+						firstOrigin = r.GetSameOrigin();
+						firstSize = r.GetSameSize();
+					}
+					else if (firstOrigin != r.GetSameOrigin())
+					{
+						isSameOrigin = false;
+						return false;
+					}
 				}
 
-				if (!isSameOrigin)
-				{
-					board.SetBlack(pt);
-					return false;
-				}
+				return true;
+			});
+
+			if (isSameOrigin && firstOrigin != (uint8_t)~0 && longestUnconnectedWhite > firstSize)
+			{
+				isSameOrigin = false;
+			}
+
+			if (!isSameOrigin)
+			{
+				board.SetBlack(pt);
+				return false;
+			}
 
 // NOTE: only used for testing, should be zero
 #define HAVE_BROKEN_EDGE_DETECTION 0
 
 #if !HAVE_BROKEN_EDGE_DETECTION
-				bool areAllNeighboursBlack = true;
-				Region(&board, pt).Neighbours([&areAllNeighboursBlack](const Point&, Square& square) {
-					if (square.GetState() != SquareState::Black)
-					{
-						areAllNeighboursBlack = false;
-						return false;
-					}
-					return true;
-				});
-
-				if (areAllNeighboursBlack)
+			bool areAllNeighboursBlack = true;
+			Region(&board, pt).Neighbours([&areAllNeighboursBlack](const Point&, const Square& square) {
+				if (square.GetState() != SquareState::Black)
 				{
-					board.SetBlack(pt);
+					areAllNeighboursBlack = false;
 					return false;
 				}
+				return true;
+			});
+
+			if (areAllNeighboursBlack)
+			{
+				board.SetBlack(pt);
+				return false;
+			}
 #endif
 
-				Region blackNeighbours = Region(&board, pt).Neighbours([](const Point& pt, Square& square) {
-					return square.GetState() == SquareState::Black;
-				});
+			Region blackNeighbours = Region(&board, pt).Neighbours([](const Point& pt, const Square& square) {
+				return square.GetState() == SquareState::Black;
+			});
 
 #if HAVE_BROKEN_EDGE_DETECTION
-				if (blackNeighbours.GetSquareCount() == 4)
-				{
-					board.SetBlack(pt);
-					return false;
-				}
+			if (blackNeighbours.GetSquareCount() == 4)
+			{
+				board.SetBlack(pt);
+				return false;
+			}
 #endif
 
-				// handle case where there are 3 black and 1 unknown square in 2x2
-				Region blackDiagonalNeighbours = blackNeighbours.Neighbours([&pt](const Point& ptInner, Square& square) {
-					return
-						Distance(pt.x, ptInner.x) == 1 &&
-						Distance(pt.y, ptInner.y) == 1 &&
-						square.GetState() == SquareState::Black;
-				});
+			// handle case where there are 3 black and 1 unknown square in 2x2
+			Region blackDiagonalNeighbours = blackNeighbours.Neighbours([&pt](const Point& ptInner, const Square& square) {
+				return
+					Distance(pt.x, ptInner.x) == 1 &&
+					Distance(pt.y, ptInner.y) == 1 &&
+					square.GetState() == SquareState::Black;
+			});
 
-				blackDiagonalNeighbours.ForEach([&pt, &square, this](const Point& ptInner, Square&) {
-					Point delta = pt - ptInner;
-					if (board.IsBlack(Point{ ptInner.x + delta.x, ptInner.y }) &&
-						board.IsBlack(Point{ ptInner.x, ptInner.y + delta.y }))
-					{
-						// we found a lone white square, we need to connect it logically
-						square.SetState(SquareState::White);
-						startOfUnconnectedWhite.push_back(pt);
-						return false;
-					}
-					return true;
-				});
-
-				if (square.GetState() == SquareState::White)
+			blackDiagonalNeighbours.ForEach([&pt, &square, this](const Point& ptInner, const Square&) {
+				Point delta = pt - ptInner;
+				if (board.IsBlack(Point{ ptInner.x + delta.x, ptInner.y }) &&
+					board.IsBlack(Point{ ptInner.x, ptInner.y + delta.y }))
 				{
-					if (pt == Point{4,10})
-					{
-						int a = 0;
-					}
-					if (!CheckForSolvedWhites())
-					{
-						ret = false;
-						return false;
-					}
+					// we found a lone white square, we need to connect it logically
+					board.SetWhite(pt);
+					startOfUnconnectedWhite.push_back(pt);
 					return false;
 				}
-			}
-			else
-			{
-				Region rColor = Region(&board, pt)
-					.ExpandAllInline([square](const Point&, Square& squareInner) {
-						return squareInner.GetState() == square.GetState();
-					});
-					
-				auto rColorSize = rColor.GetSquareCount();
+				return true;
+			});
 
-				Region rColorContinuations = rColor.Neighbours([](const Point&, Square& squareInner) {
+			if (square.GetState() == SquareState::White)
+			{
+				if (pt == Point{4,10})
+				{
+					int a = 0;
+				}
+				if (!CheckForSolvedWhites())
+				{
+					ret = false;
+					return false;
+				}
+				return false;
+			}
+		}
+		else
+		{
+			Region rColor = Region(&board, pt)
+				.ExpandAllInline([square](const Point&, const Square& squareInner) {
+					return squareInner.GetState() == square.GetState();
+				});
+				
+			auto rColorSize = rColor.GetSquareCount();
+
+			Region rColorContinuations = rColor.Neighbours([](const Point&, const Square& squareInner) {
+					return squareInner.GetState() == SquareState::Unknown;
+				});
+
+			if (rColorContinuations.GetSquareCount() == 2)
+			{
+				if (square.GetState() == SquareState::White && square.GetSize() - rColorSize == 1)
+				{
+					// Solve black on corner of white that's missing only 1 more square
+
+					Region rSquareContinuations = Region(&board, pt).Neighbours([](const Point&, const Square& squareInner) {
 						return squareInner.GetState() == SquareState::Unknown;
 					});
-
-				if (rColorContinuations.GetSquareCount() == 2)
-				{
-					if (square.GetState() == SquareState::White && square.GetSize() - rColorSize == 1)
+					if (rSquareContinuations.GetSquareCount() == 2)
 					{
-						// Solve black on corner of white that's missing only 1 more square
-
-						Region rSquareContinuations = Region(&board, pt).Neighbours([](const Point&, Square& squareInner) {
+						auto rSquareContinuationsDiagonal = rSquareContinuations.Neighbours([&pt](const Point& ptInner, const Square& squareInner) {
+							if (Distance(ptInner.x, pt.x) != 1 || Distance(ptInner.y, pt.y) != 1)
+								return false;
 							return squareInner.GetState() == SquareState::Unknown;
 						});
-						if (rSquareContinuations.GetSquareCount() == 2)
-						{
-							auto rSquareContinuationsDiagonal = rSquareContinuations.Neighbours([&pt](const Point& ptInner, Square& squareInner) {
-								if (Distance(ptInner.x, pt.x) != 1 || Distance(ptInner.y, pt.y) != 1)
-									return false;
-								return squareInner.GetState() == SquareState::Unknown;
-							});
 
-							if (rSquareContinuationsDiagonal.GetSquareCount() == 1)
-							{
-								rSquareContinuationsDiagonal.SetState(SquareState::Black);
-								return false;
-							}
+						if (rSquareContinuationsDiagonal.GetSquareCount() == 1)
+						{
+							rSquareContinuationsDiagonal.SetState(SquareState::Black);
+							return false;
 						}
 					}
 				}
 			}
+		}
 
-			return true;
-		});
+		return true;
+	});
 	return ret;
 }
 
@@ -231,7 +231,7 @@ bool Solver::CheckForSolvedWhites()
 	{
 		Point pt = initialWhites[unsolvedWhites[i]];
 		auto region = Region(&board, pt)
-			.ExpandAllInline([](const Point& pt, Square& square)
+			.ExpandAllInline([](const Point& pt, const Square& square)
 				{
 					return square.GetState() == SquareState::White;
 				});
@@ -273,7 +273,7 @@ bool Solver::CheckForSolvedWhites()
 	for (int i = 0; i < startOfUnconnectedWhite.size(); i++)
 	{
 		Point pt = startOfUnconnectedWhite[i];
-		Region r = Region(&board, pt).ExpandAllInline([](const Point& pt, Square& square)
+		Region r = Region(&board, pt).ExpandAllInline([](const Point& pt, const Square& square)
 		{
 			return square.GetState() == SquareState::White && square.GetOrigin() == (uint8_t)~0;
 		});
@@ -308,11 +308,7 @@ bool Solver::CheckForSolvedWhites()
 
 void Solver::SolveUnreachable()
 {
-	auto& initialWhites = this->initialWhites;
-	auto& unsolvedWhites = this->unsolvedWhites;
-	auto& board = this->board;
-
-	board.ForEachSquare([&initialWhites, &unsolvedWhites, &board](const Point& pt, Square& sq)
+	board.ForEachSquare([this](const Point& pt, const Square& sq)
 	{
 		if (sq.GetState() != SquareState::Unknown)
 			return true;
@@ -322,11 +318,11 @@ void Solver::SolveUnreachable()
 		{
 			auto& initialWhite = initialWhites[unsolvedWhites[i]];
 			auto region = Region(&board, initialWhite)
-				.ExpandAllInline([](const Point&, Square& sq) { return sq.GetState() == SquareState::White; });
+				.ExpandAllInline([](const Point&, const Square& sq) { return sq.GetState() == SquareState::White; });
 
 			auto regionSquaresLeft = board.Get(initialWhite).GetSize() - region.GetSquareCount();
 			
-			region.ForEach([&pt, &isReachable, regionSquaresLeft](const Point& ptInner, Square& sq)
+			region.ForEach([&pt, &isReachable, regionSquaresLeft](const Point& ptInner, const Square& sq)
 			{
 				if (Rules::CanReach(ptInner, pt, regionSquaresLeft))
 					isReachable = true;
@@ -336,7 +332,7 @@ void Solver::SolveUnreachable()
 
 		if (!isReachable)
 		{
-			sq.SetState(SquareState::Black);
+			board.SetBlack(pt);
 			return false;
 		}
 
@@ -361,7 +357,7 @@ bool Solver::SolveUnfinishedWhiteIsland()
 		if (std::find(badOrigins.begin(), badOrigins.end(), sourceOrigin) != badOrigins.end())
 			continue;
 
-		region.ExpandAllInline([&reachedAnotherOrigin, sourceOrigin, &badOrigins](const Point& pt, Square& square)
+		region.ExpandAllInline([&reachedAnotherOrigin, sourceOrigin, &badOrigins](const Point& pt, const Square& square)
 		{
 			if (reachedAnotherOrigin)
 				return false;
@@ -399,13 +395,13 @@ bool Solver::SolveUnfinishedWhiteIsland()
 		}
 		else if (region.GetSquareCount() > sourceSize)
 		{
-			auto white = Region(&board, pt).ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; });
+			auto white = Region(&board, pt).ExpandAllInline([](const Point& pt, const Square& square) { return square.GetState() == SquareState::White; });
 
 			bool isContiguous = true;
 			for (int si = 0; si < white.GetSquareCount(); si++)
 			{
 				auto whiteSingle = Region(&board, white.GetSquares()[si]);
-				if (!Region::Subtract(Region(whiteSingle).ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; }), whiteSingle).IsContiguous())
+				if (!Region::Subtract(Region(whiteSingle).ExpandAllInline([](const Point& pt, const Square& square) { return square.GetState() == SquareState::Unknown; }), whiteSingle).IsContiguous())
 				{
 					isContiguous = false;
 					break;
@@ -418,14 +414,14 @@ bool Solver::SolveUnfinishedWhiteIsland()
 			auto tmp = Region::Subtract(region, white);
 			auto tmpRet = tmp.IsContiguous();
 
-			auto pathsOut = white.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; });
+			auto pathsOut = white.Neighbours([](const Point& pt, const Square& square) { return square.GetState() == SquareState::Unknown; });
 
 			std::vector<int> pathsOutSquareCount;
 			for (int pi = 0; pi < pathsOut.GetSquareCount(); pi++)
 			{
 				pathsOutSquareCount.push_back(
 					Region(&board, pathsOut.GetSquares()[pi])
-					.ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; })
+					.ExpandAllInline([](const Point& pt, const Square& square) { return square.GetState() == SquareState::Unknown; })
 					.GetSquareCount()
 				);
 			}
@@ -505,7 +501,7 @@ int Solver::SolveBalloonWhiteSimpleSingle(Point pt)
 	auto white = Region(&board, pt);
 	auto expectedSize = white.GetSameSize();
 
-	white.ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; });
+	white.ExpandAllInline([](const Point& pt, const Square& square) { return square.GetState() == SquareState::White; });
 
 	auto actualSize = white.GetSquareCount();
 
@@ -577,7 +573,7 @@ bool Solver::SolveBalloonWhiteFillSpaceCompletely()
 		auto actualSize = white.GetSquareCount();
 		auto expectedSize = white.GetSameSize();
 
-		white.ExpandAllInline([](const Point& pt, Square& square) { return square.GetState() == SquareState::White; });
+		white.ExpandAllInline([](const Point& pt, const Square& square) { return square.GetState() == SquareState::White; });
 
 		Square sq;
 		if (!white.StartNeighbourSpill(sq))

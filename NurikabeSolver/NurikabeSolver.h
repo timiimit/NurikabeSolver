@@ -129,6 +129,8 @@ namespace Nurikabe
 
 		bool SolvePerSquare();
 
+		bool SolvePerUnknownSquare();
+
 		/// @brief Solves squares that cannot be reached by any white
 		void SolveUnreachable();
 

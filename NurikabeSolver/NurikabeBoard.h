@@ -14,6 +14,7 @@ namespace Nurikabe
 
 		int width;
 		int height;
+		int iteration;
 
 	public:
 		int GetWidth() const { return width; }
@@ -32,9 +33,10 @@ namespace Nurikabe
 	public:
 		bool Load(const char* filename);
 		bool IsLoaded() const;
-
+	
+	private:
+		Square& GetInternal(const Point& pt);
 	public:
-		Square& Get(const Point& pt);
 		const Square& Get(const Point& pt) const;
 
 	public:
@@ -54,16 +56,11 @@ namespace Nurikabe
 		void SetWhite(const Point& pt);
 		void SetBlack(const Point& pt);
 		void SetSize(const Point& pt, int size);
-
-
-	public:
-
-		bool IsFinal(const Point& pt) const;
-		void SetFinal(const Point& pt);
+		void SetOrigin(const Point& pt, int origin);
 
 	public:
-		void ForEachSquare(const PointSquareDelegate& callback);
-		void ForEachSquare(const PointSquareConstDelegate& callback) const;
+		void ForEachSquare(const PointSquareDelegate& callback) const;
+		//void ForEachSquare(const PointSquareConstDelegate& callback) const;
 
 		void Print(std::ostream& stream) const;
 	};

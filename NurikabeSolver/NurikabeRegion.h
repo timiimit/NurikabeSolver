@@ -70,15 +70,23 @@ namespace Nurikabe
 
 		Region Neighbours() const
 		{
-			return Neighbours([](const Point&, Square&) { return true; });
+			return Neighbours([](const Point&, const Square&) { return true; });
 		}
 		Region Neighbours(SquareState state) const
 		{
-			return Neighbours([state](const Point&, Square& sq) { return sq.GetState() == state; });
+			return Neighbours([state](const Point&, const Square& sq) { return sq.GetState() == state; });
 		}
 		Region& ExpandSingleInline()
 		{
-			return ExpandSingleInline([](const Point&, Square&) { return true; });
+			return ExpandSingleInline([](const Point&, const Square&) { return true; });
+		}
+		Region& ExpandSingleInline(SquareState state)
+		{
+			return ExpandSingleInline([state](const Point&, const Square& sq) { return sq.GetState() == state; });
+		}
+		Region& ExpandAllInline(SquareState state)
+		{
+			return ExpandAllInline([state](const Point&, const Square& sq) { return sq.GetState() == state; });
 		}
 
 

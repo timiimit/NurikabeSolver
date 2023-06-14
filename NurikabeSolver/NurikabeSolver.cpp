@@ -55,12 +55,12 @@ Solver& Solver::operator=(const Solver& other)
 
 void Solver::Initialize()
 {
-	board.ForEachSquare([this](const Point& pt, Square& square)
+	board.ForEachSquare([this](const Point& pt, const Square& square)
 		{
 			if (square.GetSize() != 0)
 			{
 				// determine this white's ID
-				board.Get(pt).SetOrigin((uint8_t)initialWhites.size());
+				board.SetOrigin(pt, initialWhites.size());
 
 				// add this white to our lists
 				unsolvedWhites.push_back((int)initialWhites.size());
@@ -183,7 +183,7 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 
 		Solver solver(Solver(*this));
 		solver.depth++;
-		solver.board.Get(pt).SetState(SquareState::Black);
+		solver.board.SetBlack(pt);
 		
 		if (!solver.SolveWithRules(settings.Next()))
 			return true;
@@ -315,7 +315,7 @@ bool Solver::SolveWhiteAtPredictableCorner(const SolveSettings& settings)
 		if (black.GetState() != SquareState::Black)
 			return true;
 		
-		auto unknowns = black.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; });
+		auto unknowns = black.Neighbours(SquareState::Unknown);
 		
 		unknowns.ForEachContiguousRegion([this, &settings, &ret, &black](const Region& unknown)
 		{
@@ -523,6 +523,11 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 
 		//if (*iteration == 92)
 		if (*iteration == 187 && depth == 5 && id == 58)
+		{
+			int a = 0;
+		}
+
+		if (*iteration == 83)
 		{
 			int a = 0;
 		}
