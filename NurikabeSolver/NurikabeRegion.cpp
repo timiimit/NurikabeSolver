@@ -280,6 +280,9 @@ Region Region::Intersection(const Region& a, const Region& b)
 		return Region(nullptr);
 
 	Region ret(a.board);
+	if (a.GetSquareCount() == 0 || b.GetSquareCount() == 0)
+		return ret;
+
 	ret.squares.reserve((size_t)std::min(a.squares.size(), b.squares.size()));
 	for (size_t i = 0; i < a.squares.size(); i++)
 	{
@@ -466,11 +469,7 @@ Region Region::NeighbourSpill(const Square& sq) const
 				}
 				else if (sqInner.GetState() == SquareState::Unknown)
 				{
-					if (pt == Point{2,7} || pt == Point{3,8})
-					{
-						int a = 0;
-					}
-					auto count = Region((Board*)GetBoard(), pt).Neighbours([this, &sq](const Point& ptInner, const Square& sqInner)
+					auto count = Region((Board*)GetBoard(), pt).Neighbours([this, &sq, &pt](const Point& ptInner, const Square& sqInner)
 					{
 						if (sqInner.GetState() != SquareState::White)
 							return false;
@@ -482,12 +481,11 @@ Region Region::NeighbourSpill(const Square& sq) const
 						}
 						else
 						{
-							auto whiteActualSize =
+							auto otherWhite =
 								Region((Board*)GetBoard(), ptInner)
-								.ExpandAllInline([](const Point&, const Square& sq) { return sq.GetState() == SquareState::White; })
-								.GetSquareCount();
+								.ExpandAllInline([](const Point&, const Square& sq) { return sq.GetState() == SquareState::White; });
 
-							if (GetSquareCount() + 1 + whiteActualSize <= sq.GetSize())
+							if (GetSquareCount() + 1 + otherWhite.GetSquareCount() <= sq.GetSize())
 								return false;
 						}
 						
@@ -524,7 +522,7 @@ Region Region::NeighbourSpill(const Square& sq) const
 				return true;
 
 			bool isClosed = true;
-			r.Neighbours([&notR, &ignored, state, &isClosed](const Point& pt, const Square& sqInner)
+			Region(r).ExpandAllInline([&notR, &ignored, state, &isClosed](const Point& pt, const Square& sqInner)
 			{
 				if (!isClosed)
 					return false;
@@ -554,6 +552,9 @@ Region Region::NeighbourSpill(const Square& sq) const
 
 				return true;
 			});
+
+			if (!isClosed)
+				return true;
 
 			if (isClosed)
 				removeFromDirect = Region::Union(removeFromDirect, r);

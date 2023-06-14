@@ -7,21 +7,12 @@ using namespace Nurikabe;
 
 bool Solver::SolveInflateTrivial(SquareState state)
 {
-	if (*iteration >= 485 && state == SquareState::Black)
-	{
-		int a = 0;
-	}
 
 	bool ret = true;
 	ForEachRegion([this, &ret, state](const Region& r)
 	{
 		if (r.GetState() != state)
 			return true;
-
-		if (r.GetSquareCount() == 1 && r.GetSquares()[0] == Point{4,1})
-		{
-			int a = 0;
-		}
 
 		Square sq;
 		if (!r.StartNeighbourSpill(sq))
@@ -91,11 +82,6 @@ bool Solver::SolvePerSquare()
 	bool ret = true;
 	board.ForEachSquare([this, &ret](const Point& pt, const Square& square)
 	{
-		if (pt == Point{5, 13})
-		{
-			int a = 0;
-		}
-
 		if (square.GetState() == SquareState::Unknown)
 		{
 			Region whiteNeighbours = Region(&board, pt)
@@ -190,10 +176,6 @@ bool Solver::SolvePerSquare()
 
 			if (square.GetState() == SquareState::White)
 			{
-				if (pt == Point{4,10})
-				{
-					int a = 0;
-				}
 				if (!CheckForSolvedWhites())
 				{
 					ret = false;
@@ -484,11 +466,6 @@ int Solver::SolveBalloonWhiteSimple(const Region& r)
 	auto expectedSize = r.GetSameSize();
 	auto actualSize = r.GetSquareCount();
 
-	if (r.Contains(Point{3,2}))
-	{
-		int a = 0;
-	}
-
 	Square sq;
 	if (!r.StartNeighbourSpill(sq))
 		return 2;
@@ -526,17 +503,54 @@ int Solver::SolveBalloonWhiteSimple(const Region& r)
 			{
 				if (expectedSize < actualSize + inflated.GetSquareCount() + spill.GetSquareCount())
 					return 2;
+
+				if (spill.GetSameOrigin() == (uint8_t)~0)
+				{
+					Square sqBack;
+					if (!spill.StartNeighbourSpill(sqBack))
+						return 2;
+
+					spill.ExpandAllInline(SquareState::White);
+					auto spillBack = spill.NeighbourSpill(sqBack);
+
+					assert(spillBack.GetSquareCount() > 0);
+
+					if (spillBack.GetSquareCount() == 1)
+					{
+						if (Region::Intersection(spillBack, inflated).GetSquareCount() == 0)
+							return 2;
+					}
+					else
+					{
+						auto inflateBack = Region::Union(spill, spillBack);
+						spillBack = inflateBack.NeighbourSpill(sqBack);
+						if (spillBack.GetSquareCount() != 1)
+							return 2;
+
+						if (Region::Intersection(spillBack, r).GetSquareCount() == 0)
+							return 2;
+					}
+				}
 			}
 
 			auto pathToSpill = Region::Intersection(inflated, spill.NeighbourSpill(sq));
-			if (pathToSpill.GetSquareCount() == 1)
-				pathToSpill.SetState(SquareState::White);
 
+			bool wasWhiteSet = false;
+
+			if (pathToSpill.GetSquareCount() == 1 && pathToSpill.GetState() != SquareState::White)
+			{
+				pathToSpill.SetState(SquareState::White);
+				wasWhiteSet = true;
+			}
 
 			if (spill.GetState() != SquareState::White)
 			{
 				spill.SetState(SquareState::White);
-
+				wasWhiteSet = true;
+			}
+			
+			if (wasWhiteSet)
+			{
 				if (!CheckForSolvedWhites())
 					return 0;
 
