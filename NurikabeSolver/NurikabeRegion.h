@@ -26,6 +26,7 @@ namespace Nurikabe
 		bool IsSameState() const;
 		bool IsSameOrigin() const;
 		bool IsContiguous() const;
+		bool HasSquareWithState(SquareState state) const;
 
 		// get state of all squares. undefined behavior if IsSameState returns false
 		SquareState GetState() const;
@@ -52,12 +53,14 @@ namespace Nurikabe
 		Region(Board* board, std::vector<Point> squares);
 		Region(Board* board, const Point& square);
 
-		void ForEach(const PointSquareDelegate& callback);
-		void ForEachContiguousRegion(const RegionDelegate& callback);
+		void ForEach(const PointSquareDelegate& callback) const;
+		void ForEachContiguousRegion(const RegionDelegate& callback) const;
 
 		static Region Union(const Region& a, const Region& b);
 		static Region Intersection(const Region& a, const Region& b);
 		static Region Subtract(const Region& a, const Region& b);
+
+		Region& Append(const Region& other);
 
 		//Region GetDirectNeighbours(const PointSquareDelegate& predicate) const;
 		Region Neighbours(const PointSquareDelegate& predicate, bool includeWalls = false) const;

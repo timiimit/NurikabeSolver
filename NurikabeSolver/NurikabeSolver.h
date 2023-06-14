@@ -4,6 +4,9 @@
 #include <vector>
 #include <stack>
 
+#define RETURN_AFTER_FILLING_BLACK false
+#define RETURN_AFTER_FILLING_WHITE false
+
 namespace Nurikabe
 {
 	class Solver
@@ -137,22 +140,15 @@ namespace Nurikabe
 		/// @brief Solves standalone islands by finding which squares are forced to white
 		bool SolveUnfinishedWhiteIsland();
 
-		/// @brief Solves whites which expand and then guaranteed contract into a single line
-		bool SolveBalloonWhite();
-
-        bool SolveBalloonUnconnectedWhite();
-
-        bool SolveBalloonWhiteSimple();
-
-        int SolveBalloonWhiteSimpleSingle(Point pt);
+		bool SolveBalloonWhiteSimple();
+		int SolveBalloonWhiteSimple(const Region& r);
+		bool SolveBalloonBlack();
 
 		bool SolveBalloonWhiteFillSpaceCompletely();
 
         bool SolveBlackAroundWhite();
 
 		bool SolveUnconnectedWhiteHasOnlyOnePossibleOrigin();
-
-        void SolveBalloonBlack();
 
 		void SolveBlackInCorneredWhite2By3();
 
