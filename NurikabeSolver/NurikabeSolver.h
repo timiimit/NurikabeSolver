@@ -18,6 +18,7 @@ namespace Nurikabe
 		std::vector<Point> initialWhites;
 		std::vector<int> unsolvedWhites;
 		std::vector<Point> startOfUnconnectedWhite;
+		std::vector<Region> contiguousRegions;
 
 		std::vector<Solver> solverStack;
 		std::vector<Solver> solutions;
@@ -117,6 +118,8 @@ namespace Nurikabe
 
 	private:
 		void Initialize();
+
+		void UpdateContiguousRegions();
 		
 		void ForEachRegion(const RegionDelegate& callback);
 
@@ -156,6 +159,7 @@ namespace Nurikabe
 		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
 		bool SolveGuessBlackToUnblock(int minSize);
 
+	private:
 		/// @brief Removes any solved white that is still in @p unsolvedWhites .
 		bool CheckForSolvedWhites();
 

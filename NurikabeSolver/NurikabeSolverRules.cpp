@@ -623,7 +623,7 @@ bool Solver::SolveBlackAroundWhite()
 	
 		bool hasBlackBeenFilled = false;
 		Region unknowns = black.Neighbours(SquareState::Unknown);
-		unknowns.ForEachContiguousRegion([&unknowns, &black, &hasBlackBeenFilled](Region& unknown)
+		unknowns.ForEachContiguousRegion([&unknowns, &black, &hasBlackBeenFilled](const Region& unknown)
 		{
 			auto unknownNot = Region::Subtract(unknowns, unknown);
 
@@ -660,7 +660,7 @@ bool Solver::SolveBlackAroundWhite()
 				return true;
 
 			// the nearest other black
-			auto otherBlack = Region(unknown.GetBoard(), nearestBlack).ExpandAllInline([](const Point&, const Square& sq) { return sq.GetState() == SquareState::Black; });
+			auto otherBlack = Region((Board*)unknown.GetBoard(), nearestBlack).ExpandAllInline([](const Point&, const Square& sq) { return sq.GetState() == SquareState::Black; });
 
 			// Find path around with `unknownNot`
 			isBlackReached = false;
@@ -739,7 +739,7 @@ bool Solver::SolveBlackAroundWhite()
 
 			// Check if all `whites` have space to expand when `unknown` is restricted
 			bool whitesHaveEnoughSpace = true;
-			whites.ForEachContiguousRegion([&unknown, &whitesHaveEnoughSpace](Region& white)
+			whites.ForEachContiguousRegion([&unknown, &whitesHaveEnoughSpace](const Region& white)
 			{
 				Square sq;
 				if (!white.StartNeighbourSpill(sq))
@@ -802,7 +802,7 @@ bool Solver::SolveUnconnectedWhiteHasOnlyOnePossibleOrigin()
 
 		auto obstructed = Region(&GetBoard());
 
-		relevantWhites.ForEachContiguousRegion([&obstructed](Region& white)
+		relevantWhites.ForEachContiguousRegion([&obstructed](const Region& white)
 		{
 			Square sq;
 			if (!white.StartNeighbourSpill(sq))
@@ -951,7 +951,7 @@ void Solver::SolveDisjointedBlack()
 
 			if (hasSingleJunction)
 			{
-				const_cast<Region&>(unknownEdge).SetState(SquareState::Black);
+				unknownEdge.SetState(SquareState::Black);
 				endLoop = true;
 				return false;
 			}

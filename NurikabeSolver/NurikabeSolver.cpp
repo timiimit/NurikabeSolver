@@ -71,13 +71,14 @@ void Solver::Initialize()
 		});
 }
 
-void Solver::ForEachRegion(const std::function<bool(Region &)>& callback)
+void Solver::UpdateContiguousRegions()
 {
-	auto& board = this->board;
+	// TODO: can be further optimized by updating only relevant regions instead of full rebuild
+	contiguousRegions.clear();
 
 	Region handled(&board);
 
-	board.ForEachSquare([&board, &handled, &callback](const Point& pt, const Square& sq)
+	board.ForEachSquare([this, &handled](const Point& pt, const Square& sq)
 	{
 		if (handled.Contains(pt))
 			return true;
@@ -87,9 +88,19 @@ void Solver::ForEachRegion(const std::function<bool(Region &)>& callback)
 		);
 
 		handled = Region::Union(handled, region);
+		contiguousRegions.push_back(region);
 
-		return callback(region);
+		return true;
 	});
+}
+
+void Solver::ForEachRegion(const std::function<bool(const Region &)>& callback)
+{
+	for (int i = 0; i < contiguousRegions.size(); i++)
+	{
+		if (!callback(contiguousRegions[i]))
+			break;
+	}
 }
 
 bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
@@ -306,7 +317,7 @@ bool Solver::SolveWhiteAtPredictableCorner(const SolveSettings& settings)
 		
 		auto unknowns = black.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; });
 		
-		unknowns.ForEachContiguousRegion([this, &settings, &ret, &black](Region& unknown)
+		unknowns.ForEachContiguousRegion([this, &settings, &ret, &black](const Region& unknown)
 		{
 			if (unknown.GetSquareCount() != 2)
 				return true;
@@ -483,6 +494,8 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 	const int checkFrequency = 1;
 	int iterationNextCheck = *iteration + checkFrequency;
 
+	UpdateContiguousRegions();
+
 	while (true)
 	{
 		Board boardIterationStart = board;
@@ -503,38 +516,39 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		if (!hasChangedInPrevLoop)
 		{
 			phase++;
+			continue;
 		}
-		else
+		
+		UpdateContiguousRegions();
+
+		//if (*iteration == 92)
+		if (*iteration == 187 && depth == 5 && id == 58)
 		{
-			//if (*iteration == 92)
-			if (*iteration == 187 && depth == 5 && id == 58)
-			{
-				int a = 0;
-			}
+			int a = 0;
+		}
 
-			board.Print(std::cout);
-			std::cout << "Depth: " << depth << std::endl;
-			std::cout << "Iteration: " << *iteration << std::endl;
+		board.Print(std::cout);
+		std::cout << "Depth: " << depth << std::endl;
+		std::cout << "Iteration: " << *iteration << std::endl;
 
-			phase = 0;
-			(*iteration)++;
+		phase = 0;
+		(*iteration)++;
 
-			if (*iteration >= iterationNextCheck)
-			{
-				// std::cout << "Iteration #" << *iteration << std::endl;
-				// board.Print(std::cout);
+		if (*iteration >= iterationNextCheck)
+		{
+			// std::cout << "Iteration #" << *iteration << std::endl;
+			// board.Print(std::cout);
 
-				iterationNextCheck = *iteration + checkFrequency;
-				auto eval = Evaluate();
-				if (eval.IsSolved())
-					break;
-				if (!eval.IsSolvable())
-					break;
-			}
-
-			if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
+			iterationNextCheck = *iteration + checkFrequency;
+			auto eval = Evaluate();
+			if (eval.IsSolved())
+				break;
+			if (!eval.IsSolvable())
 				break;
 		}
+
+		if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
+			break;
 	}
 
 	return true;

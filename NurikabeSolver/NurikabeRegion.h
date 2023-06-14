@@ -8,11 +8,11 @@ namespace Nurikabe
 	class Board;
 	class Region;
 
-	typedef std::function<bool(Region&)> RegionDelegate;
+	typedef std::function<bool(const Region&)> RegionDelegate;
 
 	class Region
 	{
-		Board* board;
+		mutable Board* board;
 		std::vector<Point> squares;
 	public:
 		Board* GetBoard() { return board; }
@@ -31,13 +31,13 @@ namespace Nurikabe
 		SquareState GetState() const;
 
 		// set state of all squares in this region
-		void SetState(SquareState state);
+		void SetState(SquareState state) const;
 		
 		uint8_t GetSameSize() const;
-		void SetSize(uint8_t size);
+		void SetSize(uint8_t size) const;
 
 		uint8_t GetSameOrigin() const;
-		void SetOrigin(uint8_t size);
+		void SetOrigin(uint8_t size) const;
 
 		friend bool operator==(const Region& a, const Region& b);
 
