@@ -18,6 +18,9 @@ Solver::Solver(const Board& initialBoard, int* iteration)
 	, iteration(iteration)
 	, depth(0)
 	, id(nextSolverID++)
+	, focusPointX(0)
+	, focusPointY(0)
+	, focusPointIteration(-1)
 {
 	Initialize();
 }
@@ -34,6 +37,11 @@ Solver::Solver(const Solver& other)
 	, iteration(other.iteration)
 	, depth(other.depth)
 	, id(nextSolverID++)
+
+	// We want to carry focus
+	, focusPointX(other.focusPointX)
+	, focusPointY(other.focusPointY)
+	, focusPointIteration(other.focusPointIteration)
 {
 }
 
@@ -50,6 +58,10 @@ Solver& Solver::operator=(const Solver& other)
 	iteration = other.iteration;
 	depth = other.depth;
 	id = other.id;
+
+	focusPointX = other.focusPointX;
+	focusPointY = other.focusPointY;
+	focusPointIteration = other.focusPointIteration;
 
 	return *this;
 }
@@ -109,78 +121,66 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 	if (settings.maxDepth == 0)
 		return true;
 
-	// find optimal ("human choice") black region which should
+	// find optimal ("human choice") region which should
 	// be searched for good options.
 
-	Region optimalBlackRegion;
-	double factor = 0.0f;
+	Region best;
+	double bestFactor = 0.0;
+	double bestFocusX = 0.0;
+	double bestFocusY = 0.0;
 
-	ForEachRegion([this, &optimalBlackRegion, &factor](const Region& black)
+	ForEachRegion([this, &best, &bestFactor, &bestFocusX, &bestFocusY](const Region& r)
 	{
-		if (black.GetState() != SquareState::Black)
-			return true;
-
-		if (black.GetSquares()[0]== Point{0,13})
+		double focusX;
+		double focusY;
+		double factor = EstimateRegionSearchQuality(r, focusX, focusY);
+		if (factor != INFINITY)
 		{
-			int a = 0;
-		}
-
-		auto continuations = black.Neighbours(SquareState::Unknown);
-		auto borders = Region::Intersection(continuations.Neighbours(), black);
-
-		double xCenter = 0.0;
-		double yCenter = 0.0;
-		borders.ForEach([&xCenter, &yCenter](const Point& pt, const Square&)
-		{
-			xCenter += pt.x;
-			yCenter += pt.y;
-			return true;
-		});
-		xCenter /= borders.GetSquareCount();
-		yCenter /= borders.GetSquareCount();
-
-		double borderDistances = 0;
-		borders.ForEach([&xCenter, &yCenter, &borderDistances](const Point& pt, const Square&)
-		{
-			double x = std::abs(xCenter - pt.x);
-			double y = std::abs(yCenter - pt.y);
-			borderDistances += std::sqrt(x * x + y * y);
-			return true;
-		});
-
-
-		double currentFactor = 0.0;
-		currentFactor += 0.2 * continuations.GetSquareCount();
-		//currentFactor += 0.5 * borders.GetSquareCount();
-		currentFactor -= 0.2 * std::log(black.GetSquareCount());
-		currentFactor += 0.5 * borderDistances;
-
-		// size penalty
-		if (black.GetSquareCount() <= 3)
-			currentFactor += 1.0;
-
-		if (optimalBlackRegion.GetSquareCount() == 0 || currentFactor < factor)
-		{
-			optimalBlackRegion = black;
-			factor = currentFactor;
+			if (best.GetSquareCount() == 0 || factor < bestFactor)
+			{
+				best = r;
+				bestFactor = factor;
+				bestFocusX = focusX;
+				bestFocusY = focusY;
+			}
 		}
 
 		return true;
 	});
 
-	if (optimalBlackRegion.GetSquareCount() < 1)
+	if (best.GetSquareCount() < 1)
 		return true;
 
-	// optimal black region was chosen. do a breadth search to narrow down possibilities, by eliminating unsolvable paths.
+	// Update focus point to approach active part of the board
+	if (focusPointIteration >= 0)
+	{
+		focusPointX = (focusPointX + bestFocusX) / 2.0;
+		focusPointY = (focusPointY + bestFocusY) / 2.0;
+	}
+	else
+	{
+		focusPointX = bestFocusX;
+		focusPointY = bestFocusY;
+	}
+	focusPointIteration = *iteration;
 
-	Region unknown = optimalBlackRegion.Neighbours(SquareState::Unknown);
+	// optimal region was chosen. do a breadth search to narrow down possibilities, by eliminating unsolvable paths.
+	return SolveHighLevelRecursive(settings, best);
+}
+
+bool Nurikabe::Solver::SolveHighLevelRecursive(const SolveSettings& settings, const Region& searchRegion)
+{
+	auto state = searchRegion.GetState();
+	assert(state == SquareState::Black || state == SquareState::White);
+
+	Region unknown = searchRegion.Neighbours(SquareState::Unknown);
 
 	int solvableFound = 0;
 
-	unknown.ForEach([this, &settings, &solvableFound, &unknown](const Point& pt, const Square& sq)
+	unknown.ForEach([this, &settings, &solvableFound, &unknown, &state](const Point& pt, const Square& sq)
 	{
-		if (solvableFound > 1)
-			return false;
+		//if (solvableFound > 1)
+		//	return false;
 
 		if (id == 53 && GetIteration() == 187)
 		{
@@ -195,14 +195,26 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 		// Do a breadth search over all possible placements of black squares
 		Solver solver = Solver(*this);
 		solver.depth++;
-		solver.board.SetBlack(pt);
+
+		if (state == SquareState::Black)
+			solver.board.SetBlack(pt);
+		else
+			solver.board.SetWhite(pt);
+
+		solver.board.Print(std::cout);
+		std::cout << "Depth: " << solver.depth << std::endl;
+		std::cout << "Iteration: " << *solver.iteration << std::endl;
 		
 		auto settingsNext = settings.Next();
 		settingsNext.maxDepth = 0;
 		if (!solver.SolveWithRules(settingsNext))
 			return true;
 
-		if (depth == 3)
+		solver.board.Print(std::cout);
+		std::cout << "Depth: " << solver.depth << std::endl;
+		std::cout << "Iteration: " << *solver.iteration << std::endl;
+
+		if (GetIteration() == 810)
 		{
 			int a = 0;
 		}
@@ -231,8 +243,15 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 				int a = 0;
 			}
 
-			solvableFound++;
-			solverStack.push_back(solver);
+			if (solver.GetBoard() != GetBoard())
+			{
+				solvableFound++;
+				solverStack.push_back(solver);
+			}
+			else
+			{
+				int a = 0;
+			}
 		}
 
 		// if (solvableFound > 0)
@@ -394,6 +413,100 @@ bool Solver::SolveWhiteAtPredictableCorner(const SolveSettings& settings)
 	return ret;
 }
 
+double Nurikabe::Solver::EstimateRegionSearchQuality(const Region& region, double& xCenter, double& yCenter)
+{
+	if (region.GetState() != SquareState::Black && region.GetState() != SquareState::White)
+		return INFINITY;
+
+	if (region.GetSquares()[0]== Point{0,13})
+	{
+		int a = 0;
+	}
+
+	double currentFactor = 0.0;
+
+	if (region.GetState() == SquareState::White)
+	{
+		// Temporarily don't consider white
+		return INFINITY;
+
+		if (region.GetSameOrigin() == (uint8_t)~0)
+		{
+			// Let's rather not... Too many possibilities
+			return INFINITY;
+		}
+
+		// We want to consider regions with as little remaining squares as possible
+		int squaresRemaining = region.GetSameSize() - region.GetSquareCount();
+
+		// No point in selecting solved white
+		if (squaresRemaining == 0)
+			return INFINITY;
+
+		currentFactor += 0.2 * std::pow(squaresRemaining, 2);
+
+		// // We want black regions to have some priority
+		//currentFactor += 0.1;
+	}
+	else
+	{
+		// currentFactor += 0.5 * borders.GetSquareCount();
+
+		// We want to give priority to regions of around 10 squares
+		//currentFactor += std::pow(10 - region.GetSquareCount(), 1.0) * 0.1;
+		currentFactor -= 0.2 * std::log(region.GetSquareCount());
+	}
+
+	auto continuations = region.Neighbours(SquareState::Unknown);
+	auto borders = Region::Intersection(continuations.Neighbours(), region);
+
+	xCenter = 0.0;
+	yCenter = 0.0;
+	borders.ForEach([&xCenter, &yCenter](const Point& pt, const Square&)
+	{
+		xCenter += pt.x;
+		yCenter += pt.y;
+		return true;
+	});
+	xCenter /= borders.GetSquareCount();
+	yCenter /= borders.GetSquareCount();
+
+	double borderDistances = 0;
+	double focusDistances = 0;
+	borders.ForEach([this, &xCenter, &yCenter, &borderDistances, &focusDistances](const Point& pt, const Square&)
+	{
+		double x = std::abs(xCenter - pt.x);
+		double y = std::abs(yCenter - pt.y);
+		borderDistances += std::sqrt(x * x + y * y);
+
+		x = std::abs(focusPointX - pt.x);
+		y = std::abs(focusPointY - pt.y);
+		focusDistances += std::sqrt(x * x + y * y);
+
+		return true;
+	});
+	focusDistances /= 5.0;
+
+	if (focusPointIteration >= 0)
+	{
+		// We want to keep context of what we are trying to solve currently.
+		// The more iterations ago we last used recursion, the less should
+		// focus have an effect.
+		//currentFactor += 0.5 * (focusDistances / focusPointIteration);
+	}
+
+	// We want as little continuations as possible
+	currentFactor += 0.2 * continuations.GetSquareCount();
+
+	if (region.GetState() == SquareState::Black)
+	{
+		// We want bordering squares to be as close as possible
+		//currentFactor += 0.5 * borderDistances;
+	}
+
+    return currentFactor;
+}
+
 Solver::Evaluation Solver::Evaluate()
 {
 	Evaluation eval;
@@ -537,7 +650,7 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		UpdateContiguousRegions();
 
 		//if (*iteration == 92)
-		if (*iteration == 187 && depth == 5 && id == 58)
+		if (*iteration == 799)
 		{
 			int a = 0;
 		}

@@ -234,6 +234,10 @@ int Board::GetRequiredSize(const Point& pt) const
 
 void Board::SetWhite(const Point& pt)
 {
+	if (pt == Point{3,26})
+	{
+		int a = 0;
+	}
 	if (!IsValidPosition(pt))
 		return;
 	GetInternal(pt).SetState(SquareState::White);
@@ -241,6 +245,10 @@ void Board::SetWhite(const Point& pt)
 }
 void Board::SetBlack(const Point& pt)
 {
+	if (pt == Point{8,13})
+	{
+		int a = 0;
+	}
 	if (!IsValidPosition(pt))
 		return;
 	GetInternal(pt).SetState(SquareState::Black);

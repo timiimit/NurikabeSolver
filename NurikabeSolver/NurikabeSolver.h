@@ -29,6 +29,10 @@ namespace Nurikabe
 		int depth;
 		int id;
 
+		double focusPointX;
+		double focusPointY;
+		int focusPointIteration;
+
 	public:
 		struct SolveSettings
 		{
@@ -164,7 +168,11 @@ namespace Nurikabe
 	private:
 
         bool SolveWhiteAtPredictableCorner(const SolveSettings& settings);
+
+		double EstimateRegionSearchQuality(const Region& region, double& xCenter, double& yCenter);
+
 		bool SolveHighLevelRecursive(const SolveSettings& settings);
+		bool SolveHighLevelRecursive(const SolveSettings& settings, const Region& searchRegion);
 
 		int SolvePhase(int phase, const SolveSettings& settings);
 		bool SolveWithRules(const SolveSettings& settings);

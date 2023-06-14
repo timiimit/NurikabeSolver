@@ -914,6 +914,9 @@ void Solver::SolveBlackInCorneredWhite2By3()
 		if (r.GetState() != SquareState::White)
 			return true;
 
+		if (r.GetSameSize() == 1)
+			return true;
+
 		if (r.GetSameOrigin() == (uint8_t)~0)
 			return true;
 
@@ -943,6 +946,9 @@ void Solver::SolveBlackInCorneredWhite2By3()
 		});
 
 		if (connectedWhite.GetSquareCount() != 1)
+			return true;
+
+		if (connectedWhite.GetSameSize() == 1)
 			return true;
 
 		possiblyBlack.SetState(SquareState::Black);
