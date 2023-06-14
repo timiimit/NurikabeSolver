@@ -459,7 +459,7 @@ int Solver::SolvePhase(int phase, const SolveSettings& settings)
 		[this](){ SolveDisjointedBlack(); return true; },
 		[this](){ SolveBlackInCorneredWhite2By3(); return true; },
 		[this](){ return SolveBalloonWhiteSimple(); },
-		[this](){ return SolveUnconnectedWhiteHasOnlyOnePossibleOrigin(); },
+		//[this](){ return SolveUnconnectedWhiteHasOnlyOnePossibleOrigin(); },
 		[this, settings](){ return SolveWhiteAtPredictableCorner(settings); },
 		[this, settings](){ return SolveHighLevelRecursive(settings); },
 	};

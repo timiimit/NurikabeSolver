@@ -147,9 +147,6 @@ namespace Nurikabe
 
 		bool SolveUnconnectedWhiteHasOnlyOnePossibleOrigin();
 
-        bool SolveWhiteAtPredictableCorner(const SolveSettings& settings);
-		bool SolveHighLevelRecursive(const SolveSettings& settings);
-
         void SolveBalloonBlack();
 
 		void SolveBlackInCorneredWhite2By3();
@@ -161,6 +158,11 @@ namespace Nurikabe
 
 		/// @brief Removes any solved white that is still in @p unsolvedWhites .
 		bool CheckForSolvedWhites();
+
+	private:
+
+        bool SolveWhiteAtPredictableCorner(const SolveSettings& settings);
+		bool SolveHighLevelRecursive(const SolveSettings& settings);
 
 		int SolvePhase(int phase, const SolveSettings& settings);
 		bool SolveWithRules(const SolveSettings& settings);
