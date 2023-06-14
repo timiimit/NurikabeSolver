@@ -693,6 +693,9 @@ bool Solver::Solve(const SolveSettings& settings)
 	if (settings.maxDepth == 0)
 		return true;
 
+	if (!CheckForSolvedWhites())
+		return false;
+
 	solverStack.clear();
 	solverStack.push_back(*this);
 
