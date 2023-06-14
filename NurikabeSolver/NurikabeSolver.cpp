@@ -19,6 +19,7 @@ Solver::Solver(const Board& initialBoard, int* iteration)
 	, depth(0)
 	, id(nextSolverID++)
 {
+	Initialize();
 }
 
 Solver::Solver(const Solver& other)
@@ -55,12 +56,12 @@ Solver& Solver::operator=(const Solver& other)
 
 void Solver::Initialize()
 {
-	board.ForEachSquare([this](const Point& pt, Square& square)
+	board.ForEachSquare([this](const Point& pt, const Square& square)
 		{
 			if (square.GetSize() != 0)
 			{
 				// determine this white's ID
-				board.Get(pt).SetOrigin((uint8_t)initialWhites.size());
+				board.SetOrigin(pt, initialWhites.size());
 
 				// add this white to our lists
 				unsolvedWhites.push_back((int)initialWhites.size());
@@ -71,13 +72,14 @@ void Solver::Initialize()
 		});
 }
 
-void Solver::ForEachRegion(const std::function<bool(Region &)>& callback)
+void Solver::UpdateContiguousRegions()
 {
-	auto& board = this->board;
+	// TODO: can be further optimized by updating only relevant regions instead of full rebuild
+	contiguousRegions.clear();
 
 	Region handled(&board);
 
-	board.ForEachSquare([&board, &handled, &callback](const Point& pt, const Square& sq)
+	board.ForEachSquare([this, &handled](const Point& pt, const Square& sq)
 	{
 		if (handled.Contains(pt))
 			return true;
@@ -87,15 +89,28 @@ void Solver::ForEachRegion(const std::function<bool(Region &)>& callback)
 		);
 
 		handled = Region::Union(handled, region);
+		contiguousRegions.push_back(region);
 
-		return callback(region);
+		return true;
 	});
+}
+
+void Solver::ForEachRegion(const std::function<bool(const Region &)>& callback)
+{
+	for (int i = 0; i < contiguousRegions.size(); i++)
+	{
+		if (!callback(contiguousRegions[i]))
+			break;
+	}
 }
 
 bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 {
 	if (settings.maxDepth == 0)
 		return true;
+
+	// find optimal ("human choice") black region which should
+	// be searched for good options.
 
 	Region optimalBlackRegion;
 	double factor = 0.0f;
@@ -105,11 +120,16 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 		if (black.GetState() != SquareState::Black)
 			return true;
 
+		if (black.GetSquares()[0]== Point{0,13})
+		{
+			int a = 0;
+		}
+
 		auto continuations = black.Neighbours(SquareState::Unknown);
 		auto borders = Region::Intersection(continuations.Neighbours(), black);
 
-		double xCenter;
-		double yCenter;
+		double xCenter = 0.0;
+		double yCenter = 0.0;
 		borders.ForEach([&xCenter, &yCenter](const Point& pt, const Square&)
 		{
 			xCenter += pt.x;
@@ -151,6 +171,8 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 	if (optimalBlackRegion.GetSquareCount() < 1)
 		return true;
 
+	// optimal black region was chosen. do a breadth search to narrow down possibilities, by eliminating unsolvable paths.
+
 	Region unknown = optimalBlackRegion.Neighbours(SquareState::Unknown);
 
 	int solvableFound = 0;
@@ -170,11 +192,14 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 			int a = 0;
 		}
 
-		Solver solver(Solver(*this));
+		// Do a breadth search over all possible placements of black squares
+		Solver solver = Solver(*this);
 		solver.depth++;
-		solver.board.Get(pt).SetState(SquareState::Black);
+		solver.board.SetBlack(pt);
 		
-		if (!solver.SolveWithRules(settings.Next()))
+		auto settingsNext = settings.Next();
+		settingsNext.maxDepth = 0;
+		if (!solver.SolveWithRules(settingsNext))
 			return true;
 
 		if (depth == 3)
@@ -298,15 +323,18 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 
 bool Solver::SolveWhiteAtPredictableCorner(const SolveSettings& settings)
 {
+	if (settings.maxDepth == 0)
+		return true;
+
 	bool ret = true;
 	ForEachRegion([this, &settings, &ret](const Region& black)
 	{
 		if (black.GetState() != SquareState::Black)
 			return true;
 		
-		auto unknowns = black.Neighbours([](const Point& pt, Square& square) { return square.GetState() == SquareState::Unknown; });
+		auto unknowns = black.Neighbours(SquareState::Unknown);
 		
-		unknowns.ForEachContiguousRegion([this, &settings, &ret, &black](Region& unknown)
+		unknowns.ForEachContiguousRegion([this, &settings, &ret, &black](const Region& unknown)
 		{
 			if (unknown.GetSquareCount() != 2)
 				return true;
@@ -341,25 +369,20 @@ bool Solver::SolveWhiteAtPredictableCorner(const SolveSettings& settings)
 			if (!solverCopy.CheckForSolvedWhites())
 				return true;
 
-			if (!solverCopy.SolveWithRules(settings.Next()))
-				return true;
+			// because we are often confident that this path is the right one,
+			// we try to solve it completely so we either succeed or find out
+			// that this option was actually wrong.
 
-			auto eval = solverCopy.Evaluate();
-
-			if (eval.IsSolved())
+			if (solverCopy.Solve(SolveSettings()))
 			{
 				*this = solverCopy;
 				depth--;
 			}
 			else
 			{
-				if (solverCopy.solverStack.size())
-				{
-					// push possible solutions to stack
-					solverStack.insert(solverStack.end(), solverCopy.solverStack.begin(), solverCopy.solverStack.end());
-				}
+				// because we proved that this board is not solvable,
+				// we can guarantee that `whiteNew` must be black.
 
-				// continue by assuming there's black here
 				whiteNew.SetState(SquareState::Black);
 			}
 			
@@ -459,6 +482,7 @@ int Solver::SolvePhase(int phase, const SolveSettings& settings)
 		[this](){ SolveDisjointedBlack(); return true; },
 		[this](){ SolveBlackInCorneredWhite2By3(); return true; },
 		[this](){ return SolveBalloonWhiteSimple(); },
+		//[this](){ return SolveBalloonBlack(); },
 		//[this](){ return SolveUnconnectedWhiteHasOnlyOnePossibleOrigin(); },
 		[this, settings](){ return SolveWhiteAtPredictableCorner(settings); },
 		[this, settings](){ return SolveHighLevelRecursive(settings); },
@@ -483,6 +507,8 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 	const int checkFrequency = 1;
 	int iterationNextCheck = *iteration + checkFrequency;
 
+	UpdateContiguousRegions();
+
 	while (true)
 	{
 		Board boardIterationStart = board;
@@ -493,6 +519,7 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		}
 
 		int ret = SolvePhase(phase, settings);
+
 		if (ret < 0)
 			break;
 
@@ -502,39 +529,47 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		hasChangedInPrevLoop = (board != boardIterationStart);
 		if (!hasChangedInPrevLoop)
 		{
-			phase++;
-		}
-		else
-		{
-			//if (*iteration == 92)
-			if (*iteration == 187 && depth == 5 && id == 58)
-			{
-				int a = 0;
-			}
-
-			board.Print(std::cout);
-			std::cout << "Depth: " << depth << std::endl;
-			std::cout << "Iteration: " << *iteration << std::endl;
-
-			phase = 0;
 			(*iteration)++;
+			phase++;
+			continue;
+		}
+		
+		UpdateContiguousRegions();
 
-			if (*iteration >= iterationNextCheck)
-			{
-				// std::cout << "Iteration #" << *iteration << std::endl;
-				// board.Print(std::cout);
+		//if (*iteration == 92)
+		if (*iteration == 187 && depth == 5 && id == 58)
+		{
+			int a = 0;
+		}
 
-				iterationNextCheck = *iteration + checkFrequency;
-				auto eval = Evaluate();
-				if (eval.IsSolved())
-					break;
-				if (!eval.IsSolvable())
-					break;
-			}
+		if (*iteration == 381)
+		{
+			int a = 0;
+		}
 
-			if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
+		board.Print(std::cout);
+		std::cout << "Depth: " << depth << std::endl;
+		std::cout << "Iteration: " << *iteration << std::endl;
+
+
+		(*iteration)++;
+		phase = 0;
+
+		if (*iteration >= iterationNextCheck)
+		{
+			// std::cout << "Iteration #" << *iteration << std::endl;
+			// board.Print(std::cout);
+
+			iterationNextCheck = *iteration + checkFrequency;
+			auto eval = Evaluate();
+			if (eval.IsSolved())
+				break;
+			if (!eval.IsSolvable())
 				break;
 		}
+
+		if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
+			break;
 	}
 
 	return true;
@@ -542,7 +577,9 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 
 bool Solver::Solve(const SolveSettings& settings)
 {
-	Initialize();
+	if (settings.maxDepth == 0)
+		return true;
+
 	if (!CheckForSolvedWhites())
 		return false;
 

@@ -8,11 +8,11 @@ namespace Nurikabe
 	class Board;
 	class Region;
 
-	typedef std::function<bool(Region&)> RegionDelegate;
+	typedef std::function<bool(const Region&)> RegionDelegate;
 
 	class Region
 	{
-		Board* board;
+		mutable Board* board;
 		std::vector<Point> squares;
 	public:
 		Board* GetBoard() { return board; }
@@ -26,18 +26,19 @@ namespace Nurikabe
 		bool IsSameState() const;
 		bool IsSameOrigin() const;
 		bool IsContiguous() const;
+		bool HasSquareWithState(SquareState state) const;
 
 		// get state of all squares. undefined behavior if IsSameState returns false
 		SquareState GetState() const;
 
 		// set state of all squares in this region
-		void SetState(SquareState state);
+		void SetState(SquareState state) const;
 		
 		uint8_t GetSameSize() const;
-		void SetSize(uint8_t size);
+		void SetSize(uint8_t size) const;
 
 		uint8_t GetSameOrigin() const;
-		void SetOrigin(uint8_t size);
+		void SetOrigin(uint8_t size) const;
 
 		friend bool operator==(const Region& a, const Region& b);
 
@@ -52,12 +53,14 @@ namespace Nurikabe
 		Region(Board* board, std::vector<Point> squares);
 		Region(Board* board, const Point& square);
 
-		void ForEach(const PointSquareDelegate& callback);
-		void ForEachContiguousRegion(const RegionDelegate& callback);
+		void ForEach(const PointSquareDelegate& callback) const;
+		void ForEachContiguousRegion(const RegionDelegate& callback) const;
 
 		static Region Union(const Region& a, const Region& b);
 		static Region Intersection(const Region& a, const Region& b);
 		static Region Subtract(const Region& a, const Region& b);
+
+		Region& Append(const Region& other);
 
 		//Region GetDirectNeighbours(const PointSquareDelegate& predicate) const;
 		Region Neighbours(const PointSquareDelegate& predicate, bool includeWalls = false) const;
@@ -70,15 +73,23 @@ namespace Nurikabe
 
 		Region Neighbours() const
 		{
-			return Neighbours([](const Point&, Square&) { return true; });
+			return Neighbours([](const Point&, const Square&) { return true; });
 		}
 		Region Neighbours(SquareState state) const
 		{
-			return Neighbours([state](const Point&, Square& sq) { return sq.GetState() == state; });
+			return Neighbours([state](const Point&, const Square& sq) { return sq.GetState() == state; });
 		}
 		Region& ExpandSingleInline()
 		{
-			return ExpandSingleInline([](const Point&, Square&) { return true; });
+			return ExpandSingleInline([](const Point&, const Square&) { return true; });
+		}
+		Region& ExpandSingleInline(SquareState state)
+		{
+			return ExpandSingleInline([state](const Point&, const Square& sq) { return sq.GetState() == state; });
+		}
+		Region& ExpandAllInline(SquareState state)
+		{
+			return ExpandAllInline([state](const Point&, const Square& sq) { return sq.GetState() == state; });
 		}
 
 

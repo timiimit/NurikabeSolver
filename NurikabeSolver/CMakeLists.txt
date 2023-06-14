@@ -26,6 +26,9 @@ file(
 		"10x10-2.txt"
 		"10x10-2-2.txt"
 		"10x10-3.txt"
+		"16x30-1.txt"
+		"14x24-1.txt"
+		"14x24-2.txt"
 	DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
 )
 

@@ -4,6 +4,9 @@
 #include <vector>
 #include <stack>
 
+#define RETURN_AFTER_FILLING_BLACK false
+#define RETURN_AFTER_FILLING_WHITE false
+
 namespace Nurikabe
 {
 	class Solver
@@ -18,6 +21,7 @@ namespace Nurikabe
 		std::vector<Point> initialWhites;
 		std::vector<int> unsolvedWhites;
 		std::vector<Point> startOfUnconnectedWhite;
+		std::vector<Region> contiguousRegions;
 
 		std::vector<Solver> solverStack;
 		std::vector<Solver> solutions;
@@ -117,6 +121,8 @@ namespace Nurikabe
 
 	private:
 		void Initialize();
+
+		void UpdateContiguousRegions();
 		
 		void ForEachRegion(const RegionDelegate& callback);
 
@@ -126,28 +132,23 @@ namespace Nurikabe
 
 		bool SolvePerSquare();
 
+		bool SolvePerUnknownSquare();
+
 		/// @brief Solves squares that cannot be reached by any white
 		void SolveUnreachable();
 
 		/// @brief Solves standalone islands by finding which squares are forced to white
 		bool SolveUnfinishedWhiteIsland();
 
-		/// @brief Solves whites which expand and then guaranteed contract into a single line
-		bool SolveBalloonWhite();
-
-        bool SolveBalloonUnconnectedWhite();
-
-        bool SolveBalloonWhiteSimple();
-
-        int SolveBalloonWhiteSimpleSingle(Point pt);
+		bool SolveBalloonWhiteSimple();
+		int SolveBalloonWhiteSimple(const Region& r);
+		bool SolveBalloonBlack();
 
 		bool SolveBalloonWhiteFillSpaceCompletely();
 
         bool SolveBlackAroundWhite();
 
 		bool SolveUnconnectedWhiteHasOnlyOnePossibleOrigin();
-
-        void SolveBalloonBlack();
 
 		void SolveBlackInCorneredWhite2By3();
 
@@ -156,6 +157,7 @@ namespace Nurikabe
 		/// @brief Solves black+unknown neighbour when there is only 1 way out from unknown region. This is not a guaranteed working rule.
 		bool SolveGuessBlackToUnblock(int minSize);
 
+	private:
 		/// @brief Removes any solved white that is still in @p unsolvedWhites .
 		bool CheckForSolvedWhites();
 

@@ -12,6 +12,7 @@ Board::Board()
 	: squares(nullptr)
 	, width(0)
 	, height(0)
+	, iteration(0)
 {
 }
 
@@ -19,6 +20,7 @@ Board::Board(const Board& other)
 	: squares(new Square[other.GetWidth() * other.GetHeight()])
 	, width(other.width)
 	, height(other.height)
+	, iteration(other.iteration)
 {
 	std::memcpy(squares, other.squares, sizeof(Square) * width * height);
 }
@@ -27,6 +29,7 @@ Board::Board(Board&& other)
 	: squares(std::exchange(other.squares, nullptr))
 	, width(other.width)
 	, height(other.height)
+	, iteration(other.iteration)
 {
 	
 }
@@ -50,6 +53,7 @@ Board& Board::operator=(const Board& other)
 
 	width = other.width;
 	height = other.height;
+	iteration = other.iteration;
 
 	return *this;
 }
@@ -59,6 +63,7 @@ Board& Board::operator=(Board&& other)
 	squares = std::exchange(other.squares, squares);
 	width = std::exchange(other.width, width);
 	height = std::exchange(other.height, height);
+	iteration = std::exchange(other.iteration, iteration);
 
 	return *this;
 }
@@ -178,12 +183,12 @@ bool Board::IsLoaded() const
 	return squares != nullptr;
 }
 
-Nurikabe::Square& Board::Get(const Point& pt)
+Square& Board::GetInternal(const Point& pt)
 {
 	return squares[pt.y * width + pt.x];
 }
 
-const Nurikabe::Square& Board::Get(const Point& pt) const
+const Square& Board::Get(const Point& pt) const
 {
 	return squares[pt.y * width + pt.x];
 }
@@ -231,36 +236,33 @@ void Board::SetWhite(const Point& pt)
 {
 	if (!IsValidPosition(pt))
 		return;
-	Get(pt).SetState(SquareState::White);
+	GetInternal(pt).SetState(SquareState::White);
+	iteration++;
 }
 void Board::SetBlack(const Point& pt)
 {
 	if (!IsValidPosition(pt))
 		return;
-	Get(pt).SetState(SquareState::Black);
+	GetInternal(pt).SetState(SquareState::Black);
+	iteration++;
 }
 void Board::SetSize(const Point& pt, int size)
 {
 	if (!IsValidPosition(pt))
 		return;
-	Get(pt).SetSize(size);
+	GetInternal(pt).SetSize(size);
+	iteration++;
 }
-
-
-void Board::ForEachSquare(const std::function<bool(const Point&, Square&)>& callback)
+void Board::SetOrigin(const Point& pt, int origin)
 {
-	for (int y = 0; y < GetHeight(); y++)
-	{
-		for (int x = 0; x < GetWidth(); x++)
-		{
-			Point pt = { x, y };
-			if (!callback(pt, Get(pt)))
-				return;
-		}
-	}
+	if (!IsValidPosition(pt))
+		return;
+	GetInternal(pt).SetOrigin(origin);
+	iteration++;
 }
 
-void Board::ForEachSquare(const std::function<bool(const Point&, const Square&)>& callback) const
+
+void Board::ForEachSquare(const PointSquareDelegate& callback) const
 {
 	for (int y = 0; y < GetHeight(); y++)
 	{
@@ -314,6 +316,10 @@ void Board::Print(std::ostream &stream) const
 			{
 			case SquareState::Unknown:
 				stream.put('*');
+				break;
+
+			case SquareState::Wall:
+				stream.put('+');
 				break;
 
 			case SquareState::White:

@@ -61,6 +61,16 @@ bool Region::IsContiguous() const
 	return *this == contiguous;
 }
 
+bool Nurikabe::Region::HasSquareWithState(SquareState state) const
+{
+	for (int i = 0; i < squares.size(); i++)
+	{
+		if (board->Get(squares[i]).GetState() == state)
+			return true;
+	}
+	return false;
+}
+
 SquareState Region::GetState() const
 {
 	if (squares.size() < 1)
@@ -69,12 +79,29 @@ SquareState Region::GetState() const
 	return board->Get(squares[0]).GetState();
 }
 
-void Region::SetState(SquareState state)
+void Region::SetState(SquareState state) const
 {
-	for (int i = 0; i < squares.size(); i++)
+	switch (state)
 	{
-		board->Get(squares[i]).SetState(state);
+	case SquareState::Black:
+		for (int i = 0; i < squares.size(); i++)
+		{
+			board->SetBlack(squares[i]);
+		}
+		return;
+		
+	case SquareState::White:
+		for (int i = 0; i < squares.size(); i++)
+		{
+			board->SetWhite(squares[i]);
+		}
+		return;
+
+	default:
+		assert(0);
+		break;
 	}
+
 }
 
 uint8_t Region::GetSameSize() const
@@ -101,11 +128,11 @@ uint8_t Region::GetSameSize() const
 	return val;
 }
 
-void Region::SetSize(uint8_t size)
+void Region::SetSize(uint8_t size) const
 {
 	for (int i = 0; i < squares.size(); i++)
 	{
-		board->Get(squares[i]).SetSize(size);
+		board->SetSize(squares[i], size);
 	}
 }
 
@@ -133,11 +160,11 @@ uint8_t Region::GetSameOrigin() const
 	return val;
 }
 
-void Region::SetOrigin(uint8_t origin)
+void Region::SetOrigin(uint8_t origin) const
 {
 	for (int i = 0; i < squares.size(); i++)
 	{
-		board->Get(squares[i]).SetOrigin(origin);
+		board->SetOrigin(squares[i], origin);
 	}
 }
 
@@ -194,7 +221,7 @@ Region::Region(Board* board, const Point& square)
 	this->squares.push_back(square);
 }
 
-void Region::ForEach(const PointSquareDelegate& callback)
+void Region::ForEach(const PointSquareDelegate& callback) const
 {
 	for (int i = 0; i < squares.size(); i++)
 	{
@@ -203,10 +230,8 @@ void Region::ForEach(const PointSquareDelegate& callback)
 	}
 }
 
-void Region::ForEachContiguousRegion(const RegionDelegate& callback)
+void Region::ForEachContiguousRegion(const RegionDelegate& callback) const
 {
-	auto& board = this->board;
-
 	Region handled(board);
 
 	ForEach([this, &handled, &callback](const Point& pt, const Square&)
@@ -214,7 +239,7 @@ void Region::ForEachContiguousRegion(const RegionDelegate& callback)
 		if (handled.Contains(pt))
 			return true;
 
-		Region contiguous = Region(GetBoard(), pt).ExpandAllInline(
+		Region contiguous = Region(board, pt).ExpandAllInline(
 			[this](const Point& ptInner, const Square&) { return Contains(ptInner); }
 		);
 
@@ -236,6 +261,17 @@ Nurikabe::Region Region::Union(const Region& a, const Region& b)
 			ret.squares.push_back(b.squares[i]);
 	}
 	return ret;
+}
+
+Nurikabe::Region& Region::Append(const Region& other)
+{
+	assert(GetBoard() == other.GetBoard());
+
+	for (int i = 0; i < other.GetSquareCount(); i++)
+	{
+		squares.push_back(other.squares[i]);
+	}
+	return *this;
 }
 
 Region Region::Intersection(const Region& a, const Region& b)
@@ -374,7 +410,9 @@ Region Region::NeighbourSpill(const Square& sq) const
 	{
 		if (sq.GetState() == SquareState::Black)
 		{
-			return sqInner.GetState() == SquareState::Black || sqInner.GetState() == SquareState::Unknown;
+			if (sqInner.GetState() == SquareState::Black || sqInner.GetState() == SquareState::Unknown)
+				return true;
+			return false;
 		}
 		else if (sq.GetState() == SquareState::White)
 		{
@@ -477,13 +515,16 @@ Region Region::NeighbourSpill(const Square& sq) const
 		direct.ForEachContiguousRegion([this, &sq, &direct, &removeFromDirect](const Region& r)
 		{
 			auto notR = Region::Subtract(direct, r);
-			auto ignored = Region::Intersection(*this, direct.Neighbours());
+			auto ignored = Region::Intersection(*this, Region(direct).ExpandSingleInline());
 
 			assert(ignored.GetSquareCount() > 0);
 
-			bool isClosed = true;
 			auto state = r.GetState();
-			Region(r).ExpandAllInline([&notR, &ignored, state, &isClosed](const Point& pt, const Square& sqInner)
+			if (state == SquareState::White)
+				return true;
+
+			bool isClosed = true;
+			r.Neighbours([&notR, &ignored, state, &isClosed](const Point& pt, const Square& sqInner)
 			{
 				if (!isClosed)
 					return false;
