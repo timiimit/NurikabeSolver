@@ -526,17 +526,54 @@ int Solver::SolveBalloonWhiteSimple(const Region& r)
 			{
 				if (expectedSize < actualSize + inflated.GetSquareCount() + spill.GetSquareCount())
 					return 2;
+
+				if (spill.GetSameOrigin() == (uint8_t)~0)
+				{
+					Square sqBack;
+					if (!spill.StartNeighbourSpill(sqBack))
+						return 2;
+
+					spill.ExpandAllInline(SquareState::White);
+					auto spillBack = spill.NeighbourSpill(sqBack);
+
+					assert(spillBack.GetSquareCount() > 0);
+
+					if (spillBack.GetSquareCount() == 1)
+					{
+						if (Region::Intersection(spillBack, inflated).GetSquareCount() == 0)
+							return 2;
+					}
+					else
+					{
+						auto inflateBack = Region::Union(spill, spillBack);
+						spillBack = inflateBack.NeighbourSpill(sqBack);
+						if (spillBack.GetSquareCount() != 1)
+							return 2;
+
+						if (Region::Intersection(spillBack, r).GetSquareCount() == 0)
+							return 2;
+					}
+				}
 			}
 
 			auto pathToSpill = Region::Intersection(inflated, spill.NeighbourSpill(sq));
-			if (pathToSpill.GetSquareCount() == 1)
-				pathToSpill.SetState(SquareState::White);
 
+			bool wasWhiteSet = false;
+
+			if (pathToSpill.GetSquareCount() == 1 && pathToSpill.GetState() != SquareState::White)
+			{
+				pathToSpill.SetState(SquareState::White);
+				wasWhiteSet = true;
+			}
 
 			if (spill.GetState() != SquareState::White)
 			{
 				spill.SetState(SquareState::White);
-
+				wasWhiteSet = true;
+			}
+			
+			if (wasWhiteSet)
+			{
 				if (!CheckForSolvedWhites())
 					return 0;
 
