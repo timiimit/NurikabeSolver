@@ -421,11 +421,6 @@ Region Region::NeighbourSpill(const Square& sq) const
 		{
 			if (sq.GetOrigin() == (uint8_t)~0)
 			{
-		
-		if (pt == Point{5,6})
-		{
-			int a = 0;
-		}
 				if (sqInner.GetState() == SquareState::White)
 				{
 					if (sqInner.GetOrigin() == (uint8_t)~0)
@@ -465,10 +460,6 @@ Region Region::NeighbourSpill(const Square& sq) const
 			}
 			else
 			{
-	if (pt == Point{6,4})
-	{
-		int a = 0;
-	}
 				if (sqInner.GetState() == SquareState::White)
 				{
 					if (sqInner.GetOrigin() == sq.GetOrigin() || sqInner.GetOrigin() == (uint8_t)~0)
@@ -478,10 +469,6 @@ Region Region::NeighbourSpill(const Square& sq) const
 				}
 				else if (sqInner.GetState() == SquareState::Unknown)
 				{
-					if (pt == Point{2,7} || pt == Point{3,8})
-					{
-						int a = 0;
-					}
 					auto count = Region((Board*)GetBoard(), pt).Neighbours([this, &sq, &pt](const Point& ptInner, const Square& sqInner)
 					{
 						if (sqInner.GetState() != SquareState::White)

@@ -120,11 +120,6 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 		if (black.GetState() != SquareState::Black)
 			return true;
 
-		if (black.GetSquares()[0]== Point{0,13})
-		{
-			int a = 0;
-		}
-
 		auto continuations = black.Neighbours(SquareState::Unknown);
 		auto borders = Region::Intersection(continuations.Neighbours(), black);
 
@@ -182,16 +177,6 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 		if (solvableFound > 1)
 			return false;
 
-		if (id == 53 && GetIteration() == 187)
-		{
-			int a = 0;
-		}
-
-		if (GetIteration() > 92)
-		{
-			int a = 0;
-		}
-
 		// Do a breadth search over all possible placements of black squares
 		Solver solver = Solver(*this);
 		solver.depth++;
@@ -201,11 +186,6 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 		settingsNext.maxDepth = 0;
 		if (!solver.SolveWithRules(settingsNext))
 			return true;
-
-		if (depth == 3)
-		{
-			int a = 0;
-		}
 
 		auto eval = solver.Evaluate();
 
@@ -226,11 +206,6 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 
 		if (eval.IsSolvable())
 		{
-			if (GetIteration() >= 107)
-			{
-				int a = 0;
-			}
-
 			solvableFound++;
 			solverStack.push_back(solver);
 		}
@@ -305,17 +280,8 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 
 	if (solvableFound == 1)
 	{
-		if (GetIteration() == 108)
-		{
-			int a = 0;
-		}
 		*this = this->solverStack.back();
 		depth--;
-	}
-
-	if (solvableFound > 1)
-	{
-		int a = 0;
 	}
 
 	return true;
@@ -513,11 +479,6 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 	{
 		Board boardIterationStart = board;
 
-		if (*iteration == 164)
-		{
-			int a = 0;
-		}
-
 		int ret = SolvePhase(phase, settings);
 
 		if (ret < 0)
@@ -535,17 +496,6 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		}
 		
 		UpdateContiguousRegions();
-
-		//if (*iteration == 92)
-		if (*iteration == 187 && depth == 5 && id == 58)
-		{
-			int a = 0;
-		}
-
-		if (*iteration == 381)
-		{
-			int a = 0;
-		}
 
 		board.Print(std::cout);
 		std::cout << "Depth: " << depth << std::endl;

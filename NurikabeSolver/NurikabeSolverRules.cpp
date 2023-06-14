@@ -7,21 +7,12 @@ using namespace Nurikabe;
 
 bool Solver::SolveInflateTrivial(SquareState state)
 {
-	if (*iteration >= 485 && state == SquareState::Black)
-	{
-		int a = 0;
-	}
 
 	bool ret = true;
 	ForEachRegion([this, &ret, state](const Region& r)
 	{
 		if (r.GetState() != state)
 			return true;
-
-		if (r.GetSquareCount() == 1 && r.GetSquares()[0] == Point{4,1})
-		{
-			int a = 0;
-		}
 
 		Square sq;
 		if (!r.StartNeighbourSpill(sq))
@@ -91,11 +82,6 @@ bool Solver::SolvePerSquare()
 	bool ret = true;
 	board.ForEachSquare([this, &ret](const Point& pt, const Square& square)
 	{
-		if (pt == Point{5, 13})
-		{
-			int a = 0;
-		}
-
 		if (square.GetState() == SquareState::Unknown)
 		{
 			Region whiteNeighbours = Region(&board, pt)
@@ -190,10 +176,6 @@ bool Solver::SolvePerSquare()
 
 			if (square.GetState() == SquareState::White)
 			{
-				if (pt == Point{4,10})
-				{
-					int a = 0;
-				}
 				if (!CheckForSolvedWhites())
 				{
 					ret = false;
@@ -483,11 +465,6 @@ int Solver::SolveBalloonWhiteSimple(const Region& r)
 {
 	auto expectedSize = r.GetSameSize();
 	auto actualSize = r.GetSquareCount();
-
-	if (r.Contains(Point{3,2}))
-	{
-		int a = 0;
-	}
 
 	Square sq;
 	if (!r.StartNeighbourSpill(sq))
