@@ -192,6 +192,13 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 			return false;
 		}
 
+		if (solver.solverStack.size() > 0)
+		{
+			solvableFound += solver.solverStack.size();
+			solverStack.insert(solverStack.end(), solver.solverStack.begin(), solver.solverStack.end());
+			solver.solverStack.clear();
+		}
+
 		if (eval.IsSolvable())
 		{
 			if (GetIteration() >= 107)
@@ -201,12 +208,6 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 
 			solvableFound++;
 			solverStack.push_back(solver);
-		}
-
-		if (solver.solverStack.size() > 0)
-		{
-			solvableFound += solver.solverStack.size();
-			solverStack.insert(solverStack.end(), solver.solverStack.begin(), solver.solverStack.end());
 		}
 
 		// if (solvableFound > 0)
