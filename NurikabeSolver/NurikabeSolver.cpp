@@ -1054,18 +1054,7 @@ bool Solver::SolveHighLevelRecursive(bool allowRecursion)
 		// 	std::cout << "Depth: " << depth << std::endl;
 		// 	std::cout << "Iteration: " << *iteration << std::endl;
 
-		// 	// The closer to solution we are the more in depth we want to search
-		// 	int totalSquareCount = solver.board.GetWidth() * solver.board.GetHeight();
-		// 	int totalUnknownSquareCount = 0;
-		// 	solver.ForEachRegion([&totalUnknownSquareCount](const Region& r)
-		// 	{
-		// 		if (r.GetState() == SquareState::Unknown)
-		// 			totalUnknownSquareCount += r.GetSquareCount();
-		// 		return true;
-		// 	});
-
-		// 	double percentSolved = 1.0 - (totalUnknownSquareCount / (double)totalSquareCount);
-		// 	int depthCount = (int)std::round(percentSolved * 3.0);
+		// 	int depthCount = (int)std::round(eval.progress * 3.0);
 
 		// 	for (int depthPass = 0; depthPass < depthCount; depthPass++)
 		// 	{
@@ -1323,6 +1312,8 @@ Solver::Evaluation Solver::Evaluate()
 
 	eval.existsBlack2x2 = Rules::ContainsBlack2x2(board);
 
+	eval.progress = 0;
+
 	ForEachRegion([&eval](const Region& r)
 	{
 		if (r.GetState() == SquareState::Black)
@@ -1380,10 +1371,13 @@ Solver::Evaluation Solver::Evaluate()
 		}
 		else if (r.GetState() == SquareState::Unknown)
 		{
+			eval.progress += r.GetSquareCount();
 			eval.existsUnknownRegion = true;
 		}
 		return true;
 	});
+
+	eval.progress = 1 - (eval.progress / (board.GetWidth() * board.GetHeight()));
 
 	return eval;
 }

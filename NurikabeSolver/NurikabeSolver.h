@@ -89,11 +89,12 @@ namespace Nurikabe
 			bool existsUnconnectedWhite = false;
 			bool existsUnconnectedClosedWhite = false;
 			bool existsTooLargeWhite = false;
+			double progress = 0.0;
 			//bool existsWhiteTouchingAnother = false;
 
 			bool IsSolved() const
 			{
-				bool common = !existsUnknownRegion && !existsUnconnectedWhite && !existsTooLargeWhite && !existsUnconnectedClosedWhite;
+				bool common = !existsUnknownRegion && !existsUnconnectedWhite && !existsTooLargeWhite && !existsUnconnectedClosedWhite && progress == 1.0;
 				
 				if (!existsBlackRegion)
 					return common;
