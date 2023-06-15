@@ -3,34 +3,21 @@
 #include <chrono>
 #include <assert.h>
 
-int main()
+int main(int argc, const char** argv)
 {
-	const char* files[] =
-	{
-		"5x5-easy.txt",
-		"7x7-hard.txt",
-		"10x10-1.txt",
-		"10x10-2.txt",
-		"10x10-2-2.txt",
-		"10x10-3.txt",
-		"10x18-3.txt",
-		"10x18-4.txt",
-		"10x18-hard.txt",
-		"10x18-medium.txt",
-		"16x30-1.txt",
-	};
+    const char** files = argv + 1;
+	int fileCount = argc - 1;
 
-	for (int i = 0; i < sizeof(files) / sizeof(*files); i++)
-	{
+    for (int i = 0; i < fileCount; i++)
+    {
 		Nurikabe::Board board;
 		if (!board.Load(files[i]))
 		{
-			std::cout << "Failed to read file" << std::endl;
-			return 1;
+            std::cout << "Failed to read '" << files[i] << "'" << std::endl;
+            return 1;
 		}
 
-		std::cout << "   --- Starting board ---   " << std::endl;
-		board.Print(std::cout);
+		std::cout << "Solving '" << files[i] << "' ..." << std::endl;
 
 		int iteration = 0;
 		Nurikabe::Solver solver(board, &iteration);
@@ -38,30 +25,34 @@ int main()
 		auto timeStart = std::chrono::system_clock::now();
 
 		Nurikabe::Solver::SolveSettings settings;
+		settings.maxDepth = 2;
 		auto isSolved = solver.Solve(settings);
 
 		auto timeStop = std::chrono::system_clock::now();
-		double timeElapsed = (timeStop - timeStart).count() / 1'000'000.0;
+        double timeElapsed = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(timeStop - timeStart).count();
+		timeElapsed /= 1'000'000.0;
 
 		if (!isSolved)
-		{
+        {
 			assert(0);
-			std::cout << "Failed to solve given puzzle" << std::endl << std::endl;
+			std::cout << "Failed to solve:" << std::endl << std::endl;
+			board.Print(std::cout);
 		}
 		else
 		{
-			//std::cout << std::endl << std::endl << std::endl;
-			// std::cout << "   --- Starting board ---   " << std::endl;
-			// board.Print(std::cout);
-			std::cout << "   ---  Solved board  ---   " << std::endl;
-			solver.GetBoard().Print(std::cout);
+			std::cout << "Before and After:" << std::endl;
+
+			const Nurikabe::Board* boards[] = { &board, &solver.GetBoard() };
+			Nurikabe::Board::Print(boards, 2, std::cout);
 			std::cout << std::endl;
 		}
 
 		std::cout
 			<< "Runtime: " << timeElapsed << "ms" << std::endl
 			<< "Iterations: " << iteration << std::endl;
-	}
+    }
 
-	return 0;
+    std::cout << std::endl << "Finished solving." << std::endl;
+
+    return 0;
 }
