@@ -8,6 +8,8 @@ int main(int argc, const char** argv)
     const char** files = argv + 1;
 	int fileCount = argc - 1;
 
+	int failCount = 0;
+
     for (int i = 0; i < fileCount; i++)
     {
 		Nurikabe::Board board;
@@ -37,6 +39,7 @@ int main(int argc, const char** argv)
 			assert(0);
 			std::cout << "Failed to solve:" << std::endl << std::endl;
 			board.Print(std::cout);
+			failCount++;
 		}
 		else
 		{
@@ -54,5 +57,5 @@ int main(int argc, const char** argv)
 
     std::cout << std::endl << "Finished solving." << std::endl;
 
-    return 0;
+    return failCount;
 }
