@@ -16,6 +16,9 @@ add_executable(NurikabeSolver
 )
 file(
 	COPY
+		"0-podan-1.txt"
+		"0-podan-2.txt"
+		"0-podan-3.txt"
 		"5x5-easy.txt"
 		"7x7-hard.txt"
 		"10x18-medium.txt"
