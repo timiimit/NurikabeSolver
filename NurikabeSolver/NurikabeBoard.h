@@ -64,5 +64,7 @@ namespace Nurikabe
 
 		void Print(std::ostream& stream) const;
 		static void Print(const Board** boards, int boardCount, std::ostream& stream);
+
+		static bool Difference(Board& board, const Board& other, bool compareOrigin);
 	};
 }

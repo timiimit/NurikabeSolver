@@ -46,10 +46,14 @@ Square::Square()
 
 }
 
-bool Nurikabe::Square::operator==(const Square &other) const
+bool Square::operator==(const Square& other) const
+{
+	return Equals(other, true);
+}
+bool Square::Equals(const Square &other, bool compareOrigin) const
 {
     return
 		state == other.state &&
 		size == other.size &&
-		origin == other.origin;
+		(!compareOrigin || origin == other.origin);
 }

@@ -295,7 +295,11 @@ void Board::Print(const Board** boards, int boardCount, std::ostream& stream)
 			if (bi > 0)
 				stream << ' ';
 
-			const auto& board = *(boards[bi]);
+			const auto* pBoard = boards[bi];
+			if (pBoard == nullptr)
+				continue;
+
+			const auto& board = *pBoard;
 			if (row == -2)
 			{
 				// Draw X-Axis numbers [0-9]
@@ -394,4 +398,20 @@ void Board::Print(const Board** boards, int boardCount, std::ostream& stream)
 		if (row >= maxHeight)
 			isLastRow = true;
 	}
+}
+
+bool Board::Difference(Board& board, const Board& other, bool compareOrigin)
+{
+	if (board.width != other.width || board.height != other.height)
+		return false;
+
+	int squareCount = board.width * board.height;
+	for (int i = 0; i < squareCount; i++)
+	{
+		const auto& sq = board.squares[i];
+		const auto& sqMask = other.squares[i];
+		if (!sq.Equals(sqMask, compareOrigin))
+			board.squares[i] = Square(SquareState::Wall, 0);
+	}
+	return true;
 }
