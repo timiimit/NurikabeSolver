@@ -35,6 +35,7 @@ namespace Nurikabe
 
 	public:
 		bool operator==(const Square& other) const;
+		bool Equals(const Square &other, bool compareOrigin) const;
 	};
 
 	typedef std::function<bool(const Point& point, const Square& square)> PointSquareDelegate;

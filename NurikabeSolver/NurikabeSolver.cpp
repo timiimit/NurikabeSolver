@@ -27,6 +27,7 @@ Solver::Solver(const Solver& other)
 	, initialWhites(other.initialWhites)
 	, unsolvedWhites(other.unsolvedWhites)
 	, startOfUnconnectedWhite(other.startOfUnconnectedWhite)
+	, contiguousRegions(other.contiguousRegions)
 
 	//, solverStack(other.solverStack)
 	//, solutions(other.solutions)
@@ -43,6 +44,7 @@ Solver& Solver::operator=(const Solver& other)
 	initialWhites = other.initialWhites;
 	unsolvedWhites = other.unsolvedWhites;
 	startOfUnconnectedWhite = other.startOfUnconnectedWhite;
+	contiguousRegions = other.contiguousRegions;
 
 	solverStack = other.solverStack;
 	solutions = other.solutions;
