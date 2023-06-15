@@ -472,10 +472,10 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 	int phase = 0;
 	bool hasChangedInPrevLoop = true;
 
-	const int checkFrequency = 1;
-	int iterationNextCheck = *iteration + checkFrequency;
+    const int checkFrequency = 10;
+    int iterationNextCheck = *iteration + checkFrequency;
 
-	UpdateContiguousRegions();
+    UpdateContiguousRegions();
 
 	while (true)
 	{
@@ -499,28 +499,25 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		
 		UpdateContiguousRegions();
 
-		board.Print(std::cout);
-		std::cout << "Depth: " << depth << std::endl;
-		std::cout << "Iteration: " << *iteration << std::endl;
-
 
 		(*iteration)++;
 		phase = 0;
 
 		if (*iteration >= iterationNextCheck)
-		{
-			// std::cout << "Iteration #" << *iteration << std::endl;
-			// board.Print(std::cout);
-
-			iterationNextCheck = *iteration + checkFrequency;
+        {
+            iterationNextCheck = *iteration + checkFrequency;
 			auto eval = Evaluate();
 			if (eval.IsSolved())
 				break;
 			if (!eval.IsSolvable())
 				break;
-		}
 
-		if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
+            // board.Print(std::cout);
+            // std::cout << "Depth: " << depth << std::endl;
+            // std::cout << "Iteration: " << *iteration << std::endl;
+        }
+
+        if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
 			break;
 	}
 
