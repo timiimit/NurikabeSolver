@@ -275,87 +275,123 @@ void Board::ForEachSquare(const PointSquareDelegate& callback) const
 	}
 }
 
-void Board::Print(std::ostream &stream) const
+void Board::Print(std::ostream& stream) const
 {
-	stream.put(' ');
-	stream.put(' ');
-	stream.put(' ');
-	for (int x = 0; x < width; x++)
-	{
-		stream << x % 10;
-		if (x < width - 1)
-			stream.put(' ');
-	}
-	stream.put(' ');
-	stream << std::endl;
+	const Board* pThis[] = { this };
+	Board::Print(pThis, 1, stream);
+}
 
-	stream.put(' ');
-	stream.put(' ');
-	stream.put('+');
-	for (int x = 0; x < width; x++)
+void Board::Print(const Board** boards, int boardCount, std::ostream& stream)
+{
+	// We start with drawing 2 lines of stuff above board content
+	int row = -2;
+	int maxHeight = 0;
+	bool isLastRow = false;
+	while (true)
 	{
-		stream.put('-');
-		if (x < width - 1)
-			stream.put('-');
-	}
-	stream.put('+');
-	stream << std::endl;
-
-	for (int y = 0; y < height; y++)
-	{
-		int yMod = y % 100;
-		if (yMod < 10)
-			stream << ' ';
-		stream << yMod;
-
-		stream << '|';
-		for (int x = 0; x < width; x++)
+		for (int bi = 0; bi < boardCount; bi++)
 		{
-			auto& val = Get({ x, y });
-			switch (val.GetState())
+			// Draw some space between boards
+			if (bi > 0)
+				stream << ' ';
+
+			const auto& board = *(boards[bi]);
+			if (row == -2)
 			{
-			case SquareState::Unknown:
-				stream.put('*');
-				break;
-
-			case SquareState::Wall:
-				stream.put('+');
-				break;
-
-			case SquareState::White:
-				if (val.GetSize() == 0)
-				{
-					stream.put('#');
-				}
-				else if (val.GetSize() < 10)
-				{
-					stream.put(val.GetSize() + '0');
-				}
-				else
-				{
-					stream.put(val.GetSize() - 10 + 'a');
-				}
-				break;
-			case SquareState::Black:
+				// Draw X-Axis numbers [0-9]
 				stream.put(' ');
-				break;
+				stream.put(' ');
+				stream.put(' ');
+				for (int x = 0; x < board.width; x++)
+				{
+					stream << x % 10;
+					if (x < board.width - 1)
+						stream.put(' ');
+
+					// find max board height
+					if (board.height > maxHeight)
+						maxHeight = board.height;
+				}
+				stream.put(' ');
 			}
-			if (x < width - 1)
+			else if (row == -1 || row == board.height)
+			{
+				// Draw top or bottom border
 				stream.put(' ');
-		}
-		stream.put('|');
-		stream << std::endl;
-	}
+				stream.put(' ');
+				stream.put('+');
+				for (int x = 0; x < board.width; x++)
+				{
+					stream.put('-');
+					if (x < board.width - 1)
+						stream.put('-');
+				}
+				stream.put('+');
+			}
+			else
+			{
+				int y = row;
 
-	stream.put(' ');
-	stream.put(' ');
-	stream.put('+');
-	for (int x = 0; x < width; x++)
-	{
-		stream.put('-');
-		if (x < width - 1)
-			stream.put('-');
+				// Draw Y-Axis numbers [0-99]
+				int yMod = y % 100;
+				if (yMod < 10)
+					stream << ' ';
+				stream << yMod;
+
+				// Draw left border
+				stream << '|';
+
+				// Draw board row
+				for (int x = 0; x < board.width; x++)
+				{
+					const auto& val = board.Get({ x, y });
+					switch (val.GetState())
+					{
+					case SquareState::Unknown:
+						stream.put('*');
+						break;
+
+					case SquareState::Wall:
+						stream.put('+');
+						break;
+
+					case SquareState::White:
+						if (val.GetSize() == 0)
+						{
+							stream.put('#');
+						}
+						else if (val.GetSize() < 10)
+						{
+							stream.put(val.GetSize() + '0');
+						}
+						else
+						{
+							stream.put(val.GetSize() - 10 + 'a');
+						}
+						break;
+					case SquareState::Black:
+						stream.put(' ');
+						break;
+					}
+					if (x < board.width - 1)
+						stream.put(' ');
+				}
+
+				// Draw right border
+				stream.put('|');
+			}
+		}
+
+		// Go to new line
+		stream << std::endl;
+
+		if (isLastRow)
+			break;
+
+		row++;
+
+		// We want to draw one more row after the end of boards
+		if (row >= maxHeight)
+			isLastRow = true;
 	}
-	stream.put('+');
-	stream << std::endl;
 }
