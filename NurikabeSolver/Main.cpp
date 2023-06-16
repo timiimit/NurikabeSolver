@@ -35,7 +35,7 @@ int main(int argc, const char** argv)
 
 	if (filenames.size() == 0)
 	{
-		std::cout << "Usage: NurikabeSolver -f <filename1> [filename2] [filename3] ..." << std::endl;
+		std::cout << "Usage: NurikabeSolver [-i <iteration_to_stop_at>] -f <filename1> [filename2] [filename3] ..." << std::endl;
 		return 0;
 	}
 
