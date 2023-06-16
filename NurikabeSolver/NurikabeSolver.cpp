@@ -481,13 +481,13 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 	int phase = 0;
 	bool hasChangedInPrevLoop = true;
 
-    const int checkFrequency = 10;
-    int iterationNextCheck = *iteration + checkFrequency;
+	const int checkFrequency = 10;
+	int iterationNextCheck = *iteration + checkFrequency;
 
 	const int printFrequency = 1000;
 	static int iterationNextPrint = *iteration;
 
-    UpdateContiguousRegions();
+	UpdateContiguousRegions();
 
 	while (true)
 	{
@@ -514,8 +514,8 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		phase = 0;
 
 		if (*iteration >= iterationNextCheck)
-        {
-            iterationNextCheck = *iteration + checkFrequency;
+		{
+			iterationNextCheck = *iteration + checkFrequency;
 
 			auto eval = Evaluate();
 			if (eval.IsSolved())
@@ -532,9 +532,9 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 
 				iterationNextPrint = GetIteration() + printFrequency;
 			}
-        }
+		}
 
-        if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
+		if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
 			return false;
 	}
 

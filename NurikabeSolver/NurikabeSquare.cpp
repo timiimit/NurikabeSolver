@@ -52,7 +52,7 @@ bool Square::operator==(const Square& other) const
 }
 bool Square::Equals(const Square &other, bool compareOrigin) const
 {
-    return
+	return
 		state == other.state &&
 		size == other.size &&
 		(!compareOrigin || origin == other.origin);

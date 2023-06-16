@@ -779,8 +779,8 @@ bool Solver::SolveBlackAroundWhite()
 			if (!whites.IsContiguous())
 			{
 				// NOTE: this condition might not be needed (untested).
-				//       surely other rules can take care of it
-				//       when there's multiple regions here.
+				//	   surely other rules can take care of it
+				//	   when there's multiple regions here.
 				return true;
 			}
 			

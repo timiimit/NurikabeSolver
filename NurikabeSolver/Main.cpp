@@ -41,13 +41,13 @@ int main(int argc, const char** argv)
 
 	int failCount = 0;
 
-    for (int i = 0; i < filenames.size(); i++)
-    {
+	for (int i = 0; i < filenames.size(); i++)
+	{
 		Nurikabe::Board board;
 		if (!board.Load(filenames[i]))
 		{
-            std::cout << "Failed to read '" << filenames[i] << "'" << std::endl;
-            return 1;
+			std::cout << "Failed to read '" << filenames[i] << "'" << std::endl;
+			return 1;
 		}
 
 		std::cout << "Solving '" << filenames[i] << "' ..." << std::endl;
@@ -60,11 +60,11 @@ int main(int argc, const char** argv)
 		auto isSolved = solver.Solve(settings);
 
 		auto timeStop = std::chrono::system_clock::now();
-        double timeElapsed = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(timeStop - timeStart).count();
+		double timeElapsed = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(timeStop - timeStart).count();
 		timeElapsed /= 1'000'000.0;
 
 		if (!isSolved)
-        {
+		{
 			std::cout << "Failed to solve:" << std::endl << std::endl;
 			board.Print(std::cout);
 			failCount++;
@@ -81,9 +81,9 @@ int main(int argc, const char** argv)
 		std::cout
 			<< "Runtime: " << timeElapsed << "ms" << std::endl
 			<< "Iterations: " << iteration << std::endl;
-    }
+	}
 
-    std::cout << std::endl << "Finished solving." << std::endl;
+	std::cout << std::endl << "Finished solving." << std::endl;
 
-    return failCount;
+	return failCount;
 }
