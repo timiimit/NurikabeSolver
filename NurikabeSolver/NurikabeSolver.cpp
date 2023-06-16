@@ -475,6 +475,9 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
     const int checkFrequency = 10;
     int iterationNextCheck = *iteration + checkFrequency;
 
+	const int printFrequency = 100;
+	static int iterationNextPrint = *iteration;
+
     UpdateContiguousRegions();
 
 	while (true)
@@ -486,19 +489,30 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		if (ret < 0)
 			break;
 
-		if (ret == 0)
-			return false;
-
 		hasChangedInPrevLoop = (board != boardIterationStart);
 		if (!hasChangedInPrevLoop)
 		{
-			(*iteration)++;
 			phase++;
 			continue;
 		}
 		
 		UpdateContiguousRegions();
 
+		// Board diff(boardIterationStart);
+		// assert(Board::Difference(diff, board, false));
+		// diff.ForEachSquare([](const Point&, const Square& sq)
+		// {
+		// 	if (sq.GetState() == SquareState::Unknown)
+		// 		((Square&)sq).SetState(SquareState::Black);
+
+		// 	return true;
+		// });
+
+		// std::cout << std::endl;
+		// const Board* boards[] = { &boardIterationStart, &diff, &board };
+		// Board::Print(boards, 3, std::cout);
+		// std::cout << "Depth: " << depth << std::endl;
+		// std::cout << "Iteration: " << *iteration << std::endl;
 
 		(*iteration)++;
 		phase = 0;
@@ -506,19 +520,26 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		if (*iteration >= iterationNextCheck)
         {
             iterationNextCheck = *iteration + checkFrequency;
+
 			auto eval = Evaluate();
 			if (eval.IsSolved())
 				break;
 			if (!eval.IsSolvable())
-				break;
+				return false;
 
-            // board.Print(std::cout);
-            // std::cout << "Depth: " << depth << std::endl;
-            // std::cout << "Iteration: " << *iteration << std::endl;
+			if (GetIteration() >= iterationNextPrint)
+			{
+				std::cout << std::endl;
+				board.Print(std::cout);
+				std::cout << "Depth: " << depth << std::endl;
+				std::cout << "Iteration: " << *iteration << std::endl;
+
+				iterationNextPrint = GetIteration() + printFrequency;
+			}
         }
 
         if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
-			break;
+			return false;
 	}
 
 	return true;
