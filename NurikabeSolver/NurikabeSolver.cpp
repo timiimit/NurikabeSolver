@@ -172,6 +172,9 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 
 	Region unknown = optimalBlackRegion.Neighbours(SquareState::Unknown);
 
+	if (unknown.GetSquareCount() == 0)
+		return true;
+
 	int solvableFound = 0;
 
 	unknown.ForEach([this, &settings, &solvableFound, &unknown](const Point& pt, const Square& sq)
@@ -186,27 +189,33 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 		
 		auto settingsNext = settings.Next();
 		settingsNext.maxDepth = 0;
-		if (!solver.SolveWithRules(settingsNext))
-			return true;
 
-		auto eval = solver.Evaluate();
+		bool isSolvable = solver.SolveWithRules(settingsNext);
 
-		if (eval.IsSolved())
+		if (isSolvable)
 		{
-			solvableFound = 1;
-			solverStack.clear();
-			solverStack.push_back(solver);
-			return false;
+			auto eval = solver.Evaluate();
+
+			if (eval.IsSolved())
+			{
+				solvableFound = 1;
+				solverStack.clear();
+				solverStack.push_back(solver);
+				return false;
+			}
+
+			isSolvable = eval.IsSolvable();
 		}
 
 		if (solver.solverStack.size() > 0)
 		{
+			// solvers on stack are guaranteed to be solvable
 			solvableFound += solver.solverStack.size();
 			solverStack.insert(solverStack.end(), solver.solverStack.begin(), solver.solverStack.end());
 			solver.solverStack.clear();
 		}
 
-		if (eval.IsSolvable())
+		if (isSolvable)
 		{
 			solvableFound++;
 			solverStack.push_back(solver);
@@ -472,8 +481,11 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 	int phase = 0;
 	bool hasChangedInPrevLoop = true;
 
-	const int checkFrequency = 1;
+	const int checkFrequency = 10;
 	int iterationNextCheck = *iteration + checkFrequency;
+
+	const int printFrequency = 1000;
+	static int iterationNextPrint = *iteration;
 
 	UpdateContiguousRegions();
 
@@ -487,44 +499,66 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 			break;
 
 		if (ret == 0)
-			return false;
+		 	return false;
 
 		hasChangedInPrevLoop = (board != boardIterationStart);
 		if (!hasChangedInPrevLoop)
 		{
-			(*iteration)++;
 			phase++;
 			continue;
 		}
 		
 		UpdateContiguousRegions();
 
-		board.Print(std::cout);
-		std::cout << "Depth: " << depth << std::endl;
-		std::cout << "Iteration: " << *iteration << std::endl;
-
-
 		(*iteration)++;
 		phase = 0;
 
 		if (*iteration >= iterationNextCheck)
 		{
-			// std::cout << "Iteration #" << *iteration << std::endl;
-			// board.Print(std::cout);
-
 			iterationNextCheck = *iteration + checkFrequency;
+
 			auto eval = Evaluate();
 			if (eval.IsSolved())
 				break;
 			if (!eval.IsSolvable())
-				break;
+				return false;
+
+			if (GetIteration() >= iterationNextPrint)
+			{
+				std::cout << std::endl;
+				board.Print(std::cout);
+				std::cout << "Depth: " << depth << std::endl;
+				std::cout << "Iteration: " << *iteration << std::endl;
+
+				iterationNextPrint = GetIteration() + printFrequency;
+			}
 		}
 
 		if (settings.stopAtIteration >= 0 && *iteration >= settings.stopAtIteration)
-			break;
+			return false;
 	}
 
 	return true;
+}
+
+void Solver::PrintBoardDiff(const Board& before)
+{
+	Board diff(before);
+	assert(Board::Difference(diff, board, false));
+	diff.ForEachSquare([](const Point&, const Square& sq)
+	{
+		if (sq.GetState() == SquareState::Unknown)
+			((Square&)sq).SetState(SquareState::Black);
+
+		return true;
+	});
+
+	std::cout << std::endl;
+	const Board* boards[] = { &before, &diff, &board };
+	Board::Print(boards, 3, std::cout);
+
+	std::cout << "Depth: " << depth << std::endl;
+	std::cout << "Iteration: " << *iteration << std::endl;
 }
 
 bool Solver::Solve(const SolveSettings& settings)

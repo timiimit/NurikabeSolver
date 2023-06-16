@@ -169,6 +169,8 @@ namespace Nurikabe
 		int SolvePhase(int phase, const SolveSettings& settings);
 		bool SolveWithRules(const SolveSettings& settings);
 
+		void PrintBoardDiff(const Board& before);
+
 	public:
 		bool Solve(const SolveSettings& settings = SolveSettings{-1, -1, true});
 		
