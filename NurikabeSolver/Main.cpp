@@ -2,32 +2,61 @@
 #include <iostream>
 #include <chrono>
 #include <assert.h>
+#include <cstring>
 
 int main(int argc, const char** argv)
 {
-    const char** files = argv + 1;
-	int fileCount = argc - 1;
+	Nurikabe::Solver::SolveSettings settings;
+	settings.maxDepth = 2;
+
+	std::vector<const char*> filenames;
+
+	bool isFilename = false;
+	for (int i = 1; i < argc; i++)
+	{
+		if (isFilename)
+		{
+			filenames.push_back(argv[i]);
+			continue;
+		}
+
+		if (!std::strcmp(argv[i], "-i"))
+		{
+			i++;
+			sscanf(argv[i], "%d", &settings.stopAtIteration);
+		}
+
+		if (!std::strcmp(argv[i], "-f"))
+		{
+			isFilename = true;
+			continue;
+		}
+	}
+
+	if (filenames.size() == 0)
+	{
+		std::cout << "Usage: NurikabeSolver -f <filename1> [filename2] [filename3] ..." << std::endl;
+		return 0;
+	}
 
 	int failCount = 0;
 
-    for (int i = 0; i < fileCount; i++)
+    for (int i = 0; i < filenames.size(); i++)
     {
 		Nurikabe::Board board;
-		if (!board.Load(files[i]))
+		if (!board.Load(filenames[i]))
 		{
-            std::cout << "Failed to read '" << files[i] << "'" << std::endl;
+            std::cout << "Failed to read '" << filenames[i] << "'" << std::endl;
             return 1;
 		}
 
-		std::cout << "Solving '" << files[i] << "' ..." << std::endl;
+		std::cout << "Solving '" << filenames[i] << "' ..." << std::endl;
 
 		int iteration = 0;
 		Nurikabe::Solver solver(board, &iteration);
 
 		auto timeStart = std::chrono::system_clock::now();
 
-		Nurikabe::Solver::SolveSettings settings;
-		settings.maxDepth = 2;
 		auto isSolved = solver.Solve(settings);
 
 		auto timeStop = std::chrono::system_clock::now();
@@ -36,7 +65,6 @@ int main(int argc, const char** argv)
 
 		if (!isSolved)
         {
-			assert(0);
 			std::cout << "Failed to solve:" << std::endl << std::endl;
 			board.Print(std::cout);
 			failCount++;
