@@ -475,7 +475,7 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
     const int checkFrequency = 10;
     int iterationNextCheck = *iteration + checkFrequency;
 
-	const int printFrequency = 100;
+	const int printFrequency = 1000;
 	static int iterationNextPrint = *iteration;
 
     UpdateContiguousRegions();
