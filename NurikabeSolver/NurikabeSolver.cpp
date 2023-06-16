@@ -192,8 +192,6 @@ bool Solver::SolveHighLevelRecursive(const SolveSettings& settings)
 
 		bool isSolvable = solver.SolveWithRules(settingsNext);
 
-		solver.PrintBoardDiff(board);
-
 		if (isSolvable)
 		{
 			auto eval = solver.Evaluate();
@@ -500,8 +498,6 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		if (ret < 0)
 			break;
 
-		PrintBoardDiff(boardIterationStart);
-
 		if (ret == 0)
 		 	return false;
 
@@ -513,8 +509,6 @@ bool Solver::SolveWithRules(const SolveSettings& settings)
 		}
 		
 		UpdateContiguousRegions();
-
-		PrintBoardDiff(boardIterationStart);
 
 		(*iteration)++;
 		phase = 0;
